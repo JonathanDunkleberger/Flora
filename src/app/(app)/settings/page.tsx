@@ -10,59 +10,46 @@ export default async function SettingsPage() {
   const supabase = await createServerSupabaseClient();
 
   const { data: profile } = await supabase
-    .from("profiles").select("subscription_status, subscription_period_end").eq("id", userId).single();
+    .from("profiles")
+    .select("tier, stripe_subscription_id")
+    .eq("clerk_id", userId)
+    .single();
 
-  const isPro = profile?.subscription_status === "pro";
+  const isPro = profile?.tier === "pro";
 
   return (
-    <div className="max-w-2xl mx-auto px-4 pt-20 pb-24">
-      <h1 className="text-2xl font-bold text-slate-800 mb-6">Settings</h1>
+    <div style={{ maxWidth: 520, margin: "0 auto", padding: "20px 14px 100px", fontFamily: "'DM Sans',sans-serif" }}>
+      <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 500, marginBottom: 20 }}>Settings</h1>
 
-      {/* Subscription Status */}
-      <div className="bg-white rounded-2xl border border-slate-100 p-5 mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <Crown className={`w-5 h-5 ${isPro ? "text-amber-500" : "text-slate-300"}`} />
-              <h2 className="font-semibold text-slate-800">
-                {isPro ? "Bloom Pro" : "Free Plan"}
-              </h2>
-            </div>
-            {isPro && profile?.subscription_period_end && (
-              <p className="text-xs text-slate-400 mt-1">
-                Renews {new Date(profile.subscription_period_end).toLocaleDateString()}
-              </p>
-            )}
+      <div className="card" style={{ padding: 18, marginBottom: 10 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Crown size={18} color={isPro ? "#f59e0b" : "rgba(0,0,0,0.15)"} />
+            <span style={{ fontSize: 14, fontWeight: 600 }}>{isPro ? "Bloom Pro" : "Free Plan"}</span>
           </div>
           {isPro ? (
             <SettingsClient />
           ) : (
-            <Link href="/pricing"
-              className="text-sm font-medium text-bloom-600 bg-bloom-50 px-3 py-1.5 rounded-xl hover:bg-bloom-100">
+            <Link href="/pricing" style={{ fontSize: 12, fontWeight: 600, color: "#6366f1", background: "rgba(99,102,241,0.06)", padding: "6px 14px", borderRadius: 8, textDecoration: "none" }}>
               Upgrade
             </Link>
           )}
         </div>
         {!isPro && (
-          <div className="mt-3 pt-3 border-t border-slate-100">
-            <p className="text-xs text-slate-500">
-              🌱 Free: 3 habits, fern plant only, 30-day history
-            </p>
-            <p className="text-xs text-bloom-600 mt-1">
-              ✨ Pro: Unlimited habits, all plants, heat maps, full history
-            </p>
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(0,0,0,0.04)", fontSize: 11, color: "rgba(0,0,0,0.3)" }}>
+            <p>🥚 Free: 5 habits, all features</p>
+            <p style={{ color: "#6366f1", marginTop: 3 }}>✨ Pro: Unlimited habits, exclusive creatures</p>
           </div>
         )}
       </div>
 
-      {/* Account Info */}
-      <div className="bg-white rounded-2xl border border-slate-100 p-5">
-        <h2 className="font-semibold text-slate-800 mb-3">Account</h2>
-        <p className="text-sm text-slate-500">
+      <div className="card" style={{ padding: 18 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Account</div>
+        <p style={{ fontSize: 12, color: "rgba(0,0,0,0.3)", marginBottom: 8 }}>
           Manage your account settings, profile, and security through Clerk.
         </p>
-        <Link href="/settings" className="mt-3 inline-flex items-center gap-1 text-sm text-bloom-600 hover:text-bloom-700">
-          Manage Profile <ExternalLink className="w-3 h-3" />
+        <Link href="/garden" style={{ fontSize: 12, fontWeight: 600, color: "#6366f1", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+          ← Back to Home
         </Link>
       </div>
     </div>

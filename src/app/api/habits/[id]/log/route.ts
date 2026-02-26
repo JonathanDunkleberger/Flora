@@ -1,7 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { MILESTONE_DAYS } from "@/lib/utils";
+import { MILESTONES } from "@/lib/constants";
+
+const MILESTONE_DAYS: number[] = MILESTONES.map((m) => m.days);
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -84,7 +86,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const supabase = await createServerSupabaseClient();
 
-  // Mark milestone as seen — verify it belongs to the habit
   const { data, error } = await supabase
     .from("milestones")
     .update({ seen: true })

@@ -1,13 +1,13 @@
 export interface Profile {
   id: string;
+  clerk_id: string;
   email: string;
-  first_name: string | null;
-  last_name: string | null;
-  image_url: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  tier: "free" | "pro";
+  coins: number;
   stripe_customer_id: string | null;
-  subscription_status: "free" | "pro" | "cancelled";
-  subscription_id: string | null;
-  subscription_period_end: string | null;
+  stripe_subscription_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -16,17 +16,11 @@ export interface Habit {
   id: string;
   user_id: string;
   name: string;
-  description: string | null;
-  type: "build" | "quit";
+  color: string;
+  icon_name: string;
   category: string;
-  icon: string;
-  plant_type: string;
-  habit_group: string | null;
-  target_frequency: "daily" | "weekdays" | "custom";
-  custom_days: number[];
   is_archived: boolean;
   sort_order: number;
-  quit_date: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -34,51 +28,34 @@ export interface Habit {
 export interface HabitLog {
   id: string;
   habit_id: string;
-  user_id: string;
-  date: string;
-  completed: boolean;
+  log_date: string;
   value: number;
-  notes: string | null;
-  created_at: string;
-}
-
-export interface RelapseEvent {
-  id: string;
-  habit_id: string;
-  user_id: string;
-  occurred_at: string;
-  note: string | null;
-  previous_streak: number;
   created_at: string;
 }
 
 export interface Milestone {
   id: string;
   habit_id: string;
-  user_id: string;
-  day_count: number;
-  message: string;
+  milestone_type: string;
+  value: number;
   seen: boolean;
   created_at: string;
 }
 
 export interface HabitWithStats extends Habit {
   currentStreak: number;
-  longestStreak: number;
   totalDays: number;
   completedToday: boolean;
-  plantStage: number;
+  stage: number;
   logs: HabitLog[];
 }
 
-export interface GardenData {
+export interface EarnedMilestones {
+  [key: string]: boolean; // "habitId:days" -> true
+}
+
+export interface AppData {
   habits: HabitWithStats[];
-  gardenHealth: number;
-  gardenName: string;
-  totalStreakScore: number;
-  hasStorm: boolean;
-  groundColor: string;
-  ambientType: string;
-  lastRelapse: string | null;
-  unseenMilestone: Milestone | null;
+  coins: number;
+  earned: EarnedMilestones;
 }
