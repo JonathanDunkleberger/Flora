@@ -116,7 +116,7 @@ body {
 
 /* ─── Card ─── */
 .cd {
-  border-radius: 18px;
+  border-radius: 16px;
   border: 1px solid transparent;
   transition: background .3s, border-color .3s, box-shadow .3s;
 }

@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Check, Plus, X, Flame, ChevronLeft, ChevronRight, Coins, Sparkles,
+  Check, Plus, X, Flame, ChevronLeft, Coins, Sparkles,
   Pencil, Shield, Sun, Moon, LayoutGrid,
   Users, RefreshCw, Wind, DollarSign,
   Sunrise, SunMedium, MoonStar, Menu, Store,
@@ -70,6 +70,8 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   const [relapseHabit, setRelapseHabit] = useState<HabitWithStats | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [ownedItems, setOwnedItems] = useState<string[]>([]);
+  const [swipedId, setSwipedId] = useState<string | null>(null);
+  const swipeRef = useRef<{ startX: number; id: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const editRef = useRef<HTMLInputElement>(null);
   const terRef = useRef<HTMLDivElement>(null);
@@ -621,19 +623,17 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 <DollarSign size={11} />{fmtMoney(totalSaved)} saved
               </div>
             )}
-            {page === "main" && (
-              <button
-                onClick={() => setMenuOpen(true)}
-                title="Menu"
-                style={{
-                  background: th.progressBg, border: "none", borderRadius: 8,
-                  padding: 5, cursor: "pointer", display: "flex", color: th.textSub,
-                  transition: "all .15s",
-                }}
-              >
-                <Menu size={16} />
-              </button>
-            )}
+            <button
+              onClick={() => setMenuOpen(true)}
+              title="Menu"
+              style={{
+                background: th.progressBg, border: "none", borderRadius: 8,
+                padding: 5, cursor: "pointer", display: "flex", color: th.textSub,
+                transition: "all .15s",
+              }}
+            >
+              <Menu size={16} />
+            </button>
           </div>
         </div>
 
@@ -709,13 +709,10 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 <div style={{
                   position: "absolute", bottom: 8, left: 8,
                   background: "rgba(0,0,0,0.35)", backdropFilter: "blur(8px)", borderRadius: 8,
-                  padding: "3px 8px", fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.7)",
-                  display: "flex", alignItems: "center", gap: 4, zIndex: 5,
+                  padding: "3px 10px", fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.65)",
+                  zIndex: 5, letterSpacing: 0.3,
                 }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill={allDone ? "#FFD700" : todayPct >= 0.5 ? "#FFD700" : "none"} stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                  </svg>
-                  {allDone ? "Thriving" : todayPct >= 0.5 ? "Happy" : todayPct > 0 ? "Waking up" : "Sleepy"}
+                  {allDone ? "Thriving" : todayPct >= 0.5 ? "Growing" : todayPct > 0 ? "Waking up" : "Resting"}
                 </div>
               )}
             </div>
@@ -805,91 +802,121 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                   const cleanDays = quit ? getCleanDays(h.id) : 0;
                   const qd = quit ? getQuitData(h.id) : undefined;
                   const moneySaved = quit && qd ? (qd.dailyCost || 0) * cleanDays : 0;
+                  const isSwiped = swipedId === h.id;
                   return (
-                    <div key={h.id} className="rw" style={{
-                      animation: "fadeUp 0.3s ease",
-                      background: "transparent",
-                    }}>
-                      {quit ? (
-                        /* Quit habit: shield icon instead of checkbox */
+                    <div key={h.id} style={{ position: "relative", overflow: "hidden", borderRadius: 10, animation: "fadeUp 0.3s ease" }}>
+                      {/* Delete action behind */}
+                      <div style={{
+                        position: "absolute", right: 0, top: 0, bottom: 0, width: 72,
+                        background: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center",
+                        borderRadius: "0 10px 10px 0",
+                      }}>
+                        <button onClick={() => { setSwipedId(null); removeHabit(h.id); }} style={{
+                          background: "none", border: "none", color: "white", fontSize: 11,
+                          fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                          display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+                        }}>
+                          <X size={16} />Delete
+                        </button>
+                      </div>
+                      {/* Swipeable foreground row */}
+                      <div className="rw" style={{
+                        background: th.card,
+                        transform: isSwiped ? "translateX(-72px)" : "translateX(0)",
+                        transition: "transform 0.25s cubic-bezier(.16,1,.3,1)",
+                        position: "relative", zIndex: 1,
+                      }}
+                        onTouchStart={(e) => { swipeRef.current = { startX: e.touches[0].clientX, id: h.id }; }}
+                        onTouchMove={(e) => {
+                          if (!swipeRef.current || swipeRef.current.id !== h.id) return;
+                          const dx = swipeRef.current.startX - e.touches[0].clientX;
+                          if (dx > 40) setSwipedId(h.id);
+                          else if (dx < -20) setSwipedId(null);
+                        }}
+                        onTouchEnd={() => { swipeRef.current = null; }}
+                      >
+                        {quit ? (
+                          /* Quit habit: green dot indicator */
+                          <div
+                            style={{
+                              width: 26, height: 26, borderRadius: 8,
+                              background: `${h.color}18`,
+                              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                            }}
+                            onClick={() => { setDetailId(h.id); setPage("detail"); }}
+                          >
+                            <div style={{
+                              width: 10, height: 10, borderRadius: "50%",
+                              background: cleanDays > 0 ? "#4caf50" : h.color,
+                              boxShadow: cleanDays > 0 ? "0 0 6px rgba(76,175,80,0.4)" : "none",
+                            }} />
+                          </div>
+                        ) : (
+                          <div
+                            className={`ck ${done ? "d" : ""}`}
+                            style={{
+                              background: done ? h.color : "transparent",
+                              borderColor: done ? "transparent" : th.checkBorder,
+                            }}
+                            onClick={(e) => { e.stopPropagation(); toggleCompletion(h.id); }}
+                          >
+                            <Check size={14} color="white" strokeWidth={3} />
+                          </div>
+                        )}
                         <div
-                          style={{
-                            width: 26, height: 26, borderRadius: 8,
-                            background: `${h.color}18`,
-                            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                          }}
+                          style={{ flex: 1, cursor: "pointer" }}
                           onClick={() => { setDetailId(h.id); setPage("detail"); }}
                         >
-                          <Shield size={14} color={h.color} />
-                        </div>
-                      ) : (
-                        <div
-                          className={`ck ${done ? "d" : ""}`}
-                          style={{
-                            background: done ? h.color : "transparent",
-                            borderColor: done ? "transparent" : th.checkBorder,
-                          }}
-                          onClick={(e) => { e.stopPropagation(); toggleCompletion(h.id); }}
-                        >
-                          <Check size={14} color="white" strokeWidth={3} />
-                        </div>
-                      )}
-                      <div
-                        style={{ flex: 1, cursor: "pointer" }}
-                        onClick={() => { setDetailId(h.id); setPage("detail"); }}
-                      >
-                        <span
-                          style={{
-                            fontSize: 14, fontWeight: 500,
+                          <span style={{
+                            fontSize: 15, fontWeight: 500,
                             textDecoration: !quit && done ? "line-through" : "none",
                             color: !quit && done ? th.textMuted : th.text,
                             transition: "all 0.2s",
-                          }}
+                          }}>
+                            {h.name}
+                          </span>
+                          {quit && qd?.quitDate && (
+                            <div style={{ fontSize: 11, color: th.textSub, fontWeight: 500, marginTop: 1 }}>
+                              {cleanDays === 0 ? "Started today — you got this!" : `${fmtDuration(cleanDays)} clean`}{moneySaved > 0 && <span style={{ color: "#4caf50", marginLeft: 4 }}>• {fmtMoney(moneySaved)} saved</span>}
+                            </div>
+                          )}
+                          {!quit && streak > 0 && (
+                            <div style={{ fontSize: 11, color: th.textSub, fontWeight: 500, marginTop: 1 }}>
+                              {streak}d streak{hasFz ? " · 🧊 freeze active" : ""}
+                            </div>
+                          )}
+                        </div>
+                        <div
+                          style={{ display: "flex", alignItems: "center", gap: 5 }}
+                          onClick={() => { setDetailId(h.id); setPage("detail"); }}
                         >
-                          {h.name}
-                        </span>
-                        {quit && qd?.quitDate && (
-                          <div style={{ fontSize: 10, color: th.textSub, fontWeight: 500, marginTop: 1 }}>
-                            {cleanDays === 0 ? "Started today — you got this!" : `${fmtDuration(cleanDays)} clean`}{moneySaved > 0 && <span style={{ color: "#4caf50", marginLeft: 4 }}>• {fmtMoney(moneySaved)} saved</span>}
-                          </div>
-                        )}
+                          {quit ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); logUrge(h.id); setCoinToast({ msg: "Urge resisted", icon: Wind }); }}
+                              style={{
+                                fontSize: 9, fontWeight: 700, padding: "3px 9px", borderRadius: 100,
+                                background: `${h.color}12`, color: h.color,
+                                border: "none", cursor: "pointer", fontFamily: "inherit",
+                                display: "inline-flex", alignItems: "center", gap: 3,
+                              }}
+                            >
+                              <Wind size={9} /> Urge
+                            </button>
+                          ) : (
+                            <>
+                              {streak >= 7 && (
+                                <span style={{
+                                  fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 100,
+                                  background: th.streakActiveBg, color: "#d97706",
+                                  display: "inline-flex", alignItems: "center", gap: 2,
+                                }}>
+                                  <Flame size={9} />{streak}d
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <div
-                        style={{ display: "flex", alignItems: "center", gap: 5 }}
-                        onClick={() => { setDetailId(h.id); setPage("detail"); }}
-                      >
-                        {quit ? (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); logUrge(h.id); setCoinToast({ msg: "Urge resisted", icon: Wind }); }}
-                            style={{
-                              fontSize: 9, fontWeight: 700, padding: "3px 9px", borderRadius: 100,
-                              background: `${h.color}12`, color: h.color,
-                              border: "none", cursor: "pointer", fontFamily: "inherit",
-                              display: "inline-flex", alignItems: "center", gap: 3,
-                            }}
-                          >
-                            <Wind size={9} /> Urge
-                          </button>
-                        ) : (
-                          <>
-                            {hasFz && <Shield size={10} color="#42b4d6" style={{ opacity: 0.5 }} />}
-                            {streak > 0 && (
-                              <span style={{
-                                fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 100,
-                                background: streak >= 7 ? th.streakActiveBg : th.streakBg,
-                                color: streak >= 7 ? "#d97706" : th.textMuted,
-                                display: "inline-flex", alignItems: "center", gap: 2,
-                              }}>
-                                <Flame size={9} />{streak}d
-                              </span>
-                            )}
-                          </>
-                        )}
-                        <ChevronRight size={14} color={th.textFaint} />
-                      </div>
-                      <button className="dl" style={{ color: th.textFaint }} onClick={(e) => { e.stopPropagation(); removeHabit(h.id); }}>
-                        <X size={12} />
-                      </button>
                     </div>
                   );
                 })
@@ -913,7 +940,6 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                       <span style={{ flex: 1, fontSize: 11, color: th.text }}>
                         <b>{h.name}</b> — tap to protect your <span style={{ color: h.color, fontWeight: 700 }}>{getStreak(h.id)}d streak</span>
                       </span>
-                      <ChevronRight size={12} color={th.textFaint} />
                     </div>
                   ))}
                 </div>
@@ -989,10 +1015,15 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 /* ── Quit habit hero: big clean counter ── */
                 <>
                   <Creature stage={Math.min(4, Math.floor(cleanD / 7))} color={detailHabit.color} happy={cleanD > 0} size={88} />
-                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: 42, fontWeight: 700, color: detailHabit.color, marginTop: 8 }}>
+                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: 48, fontWeight: 700, color: detailHabit.color, marginTop: 8, letterSpacing: "-1px" }}>
                     {fmtDuration(cleanD)}
                   </div>
                   <div style={{ fontSize: 12, color: th.textSub, fontWeight: 500 }}>clean</div>
+                  {dqd && (dqd.dailyCost || 0) > 0 && cleanD > 0 && (
+                    <div style={{ fontSize: 12, color: "#4caf50", fontWeight: 600, marginTop: 4 }}>
+                      <DollarSign size={11} style={{ display: "inline", verticalAlign: "-1px" }} />{fmtMoney((dqd.dailyCost || 0) * cleanD)} saved
+                    </div>
+                  )}
                 </>
               ) : (
                 <Creature stage={getStageForId(detailHabit.id)} color={detailHabit.color} happy={isHappy(detailHabit.id)} size={88} />
@@ -1030,8 +1061,8 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                       <Pencil size={12} color={th.textSub} />
                     </button>
                   </div>
-                  <p style={{ fontSize: 10, color: th.textSub, marginTop: 2 }}>
-                    {dq ? "Quit journey" : `${STAGE_LABELS[getStageForId(detailHabit.id)]} creature`}
+                  <p style={{ fontSize: 11, color: th.textSub, marginTop: 2 }}>
+                    {dq ? `Quitting · ${STAGE_LABELS[getStageForId(detailHabit.id)]}` : `Building · ${STAGE_LABELS[getStageForId(detailHabit.id)]}`}
                   </p>
                 </>
               )}
@@ -1044,10 +1075,11 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                   const nx = STAGE_THRESHOLDS[st + 1];
                   const pv = STAGE_THRESHOLDS[st];
                   const pct = Math.min(((tot - pv) / (nx - pv)) * 100, 100);
+                  const remaining = nx - tot;
                   return (
                     <div style={{ maxWidth: 240, margin: "14px auto 0" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: th.textMuted, marginBottom: 3 }}>
-                        <span>{tot} days</span><span>{nx} to evolve</span>
+                        <span>{STAGE_LABELS[st]}</span><span>{STAGE_LABELS[st + 1]} in {remaining}d</span>
                       </div>
                       <div style={{ height: 6, borderRadius: 3, background: th.progressBg, overflow: "hidden" }}>
                         <div style={{

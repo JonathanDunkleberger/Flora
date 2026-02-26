@@ -138,14 +138,25 @@ export function Shop({ coins, ownedItems, onBuy, th }: ShopProps) {
       </div>
 
       {/* Tip */}
-      <div style={{
-        marginTop: 12, padding: 12, borderRadius: 12,
-        background: th.coinBg, textAlign: "center",
-        fontSize: 10, color: th.textSub, lineHeight: 1.5,
-      }}>
-        Earn coins by building streaks and hitting milestones.
-        Purchased items appear on your planet!
-      </div>
+      {coins === 0 ? (
+        <div style={{
+          marginTop: 12, padding: 16, borderRadius: 12,
+          background: th.coinBg, textAlign: "center",
+          fontSize: 12, color: th.text, lineHeight: 1.6, fontWeight: 500,
+        }}>
+          Earn coins by completing habits, building streaks, and hitting milestones.
+          <br /><span style={{ fontSize: 10, color: th.textSub, fontWeight: 400 }}>Every check-in counts!</span>
+        </div>
+      ) : (
+        <div style={{
+          marginTop: 12, padding: 12, borderRadius: 12,
+          background: th.coinBg, textAlign: "center",
+          fontSize: 10, color: th.textSub, lineHeight: 1.5,
+        }}>
+          Earn coins by building streaks and hitting milestones.
+          Purchased items appear on your planet!
+        </div>
+      )}
     </div>
   );
 }

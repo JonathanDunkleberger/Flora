@@ -27,12 +27,19 @@ export function TerrariumScene({
   const sn = SEASONS[season] || SEASONS.summer;
   const sr = seed;
 
-  // Planet center & radius
-  const cx = 200, cy = 190, pr = 85 + pct * 10;
+  // Planet center & radius — scales up with more habits
+  const cx = 200, cy = 190;
+  const baseR = 85 + pct * 10;
+  const pr = habits.length <= 3 ? baseR
+    : habits.length <= 5 ? baseR * 1.1
+    : habits.length <= 7 ? baseR * 1.2
+    : baseR * 1.3;
 
   // Distribute creatures evenly around the top arc of planet
   const creatureAngles = habits.map((_, i) => {
-    const spread = Math.min(habits.length * 32, 170);
+    const spread = habits.length <= 3 ? 90
+      : habits.length <= 5 ? 150
+      : 200;
     const start = -90 - spread / 2;
     return start + (habits.length === 1 ? 0 : i * (spread / (habits.length - 1)));
   });
@@ -57,7 +64,9 @@ export function TerrariumScene({
 
   return (
     <div style={{
-      position: "relative", width: "100%", aspectRatio: "4/3", borderRadius: 22, overflow: "hidden",
+      position: "relative", width: "100%",
+      aspectRatio: habits.length <= 4 ? "4/3" : habits.length <= 6 ? "4/3.3" : "4/3.6",
+      borderRadius: 22, overflow: "hidden",
       background: `radial-gradient(ellipse at 50% 60%, ${sky[2]} 0%, ${sky[1]} 40%, ${sky[0]} 100%)`,
       transition: "background 1.5s ease",
       boxShadow: "0 2px 24px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.05)",
@@ -243,12 +252,13 @@ export function TerrariumScene({
           const rotDeg = angleDeg + 90;
 
           const mx = habits.length > 6 ? 36 : habits.length > 4 ? 42 : habits.length > 3 ? 50 : 58;
-          const sz = Math.min(40 + st * 5, mx);
+          const stageSizes = [28, 32, 36, 40, 44];
+          const sz = habits.length >= 8 ? Math.max(20, stageSizes[st] * 0.7) : Math.min(stageSizes[st], mx);
           const scale = sz / 52;
 
           // Stage 0 = egg
           if (st === 0) {
-            const eggSz = Math.min(38, mx);
+            const eggSz = habits.length >= 8 ? 20 : Math.min(28, mx);
             const eggScale = eggSz / 52;
             return (
               <g key={h.id} transform={`translate(${px}, ${py}) rotate(${rotDeg})`}>

@@ -90,7 +90,7 @@ export default async function GardenPage() {
   return (
     <BloomApp
       initialHabits={habitsWithStats}
-      initialCoins={profile?.coins ?? 100}
+      initialCoins={profile?.coins ?? 250}
       initialEarned={earned}
       initialStreakFreezes={(profile?.streak_freezes as Record<string, number>) ?? {}}
     />

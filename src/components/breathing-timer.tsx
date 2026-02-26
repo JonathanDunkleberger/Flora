@@ -64,12 +64,12 @@ export function BreathingTimer({ habit, onComplete, onClose }: BreathingTimerPro
                 <circle cx="80" cy="80" r={ringR} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="4" />
                 <circle cx="80" cy="80" r={ringR} fill="none" stroke={habit.color} strokeWidth="4"
                   strokeDasharray={ringC} strokeDashoffset={ringC * (1 - ringPct)} strokeLinecap="round"
-                  style={{ transition: "stroke-dashoffset 0.5s ease" }} opacity="0.8" />
+                  style={{ transition: "stroke-dashoffset 1s linear" }} opacity="0.8" />
               </svg>
               <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <div style={{
                   transform: `scale(${phase === "inhale" ? 1 + ringPct * 0.15 : phase === "hold" ? 1.15 : 1.15 - ringPct * 0.15})`,
-                  transition: "transform 0.5s ease",
+                  transition: "transform 1s ease-in-out",
                 }}>
                   <Creature stage={3} color={habit.color} happy={true} size={64} />
                 </div>
