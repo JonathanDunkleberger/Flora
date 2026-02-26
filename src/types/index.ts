@@ -56,6 +56,7 @@ export interface QuitData {
   dailyCost: number;      // $ saved per day
   reason: string;         // personal reason
   urges: string[];        // array of ISO dates when urges were logged
+  bestStreak: number;     // best clean-day streak achieved (survives relapse resets)
 }
 
 export interface EarnedMilestones {

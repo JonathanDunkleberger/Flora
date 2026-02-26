@@ -265,8 +265,9 @@ export function TerrariumScene({
                     {/* Subtle crack lines for anticipation */}
                     <path d="M-1.5 3 L0 1 L1.5 3.5" stroke={h.color} strokeWidth="0.6" fill="none" opacity="0.3" filter="url(#lp-soft)" />
                   </g>
-                  {/* Name label */}
+                  {/* Name label — horizontal (counter-rotate) */}
                   <text y={eggSz / 2 + 8} textAnchor="middle" fontSize="8.5" fill="rgba(255,255,255,0.7)" fontWeight="600"
+                    transform={`rotate(${-rotDeg})`}
                     style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>{h.name}</text>
                 </g>
               </g>
@@ -309,8 +310,9 @@ export function TerrariumScene({
                   {/* Crown for evolved */}
                   {st >= 4 && <path d="M-5,-8 L-3,-14 L0,-10 L3,-14 L5,-8Z" fill="#FFD700" opacity="0.7" />}
                 </g>
-                {/* Name label */}
+                {/* Name label — horizontal (counter-rotate) */}
                 <text y={sz / 2 + 8} textAnchor="middle" fontSize="8.5" fill="rgba(255,255,255,0.7)" fontWeight="600"
+                  transform={`rotate(${-rotDeg})`}
                   style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>{h.name}</text>
               </g>
             </g>
@@ -379,6 +381,13 @@ export function TerrariumScene({
           </>
         )}
       </svg>
+
+      {/* Bottom gradient overlay */}
+      <div style={{
+        position: "absolute", bottom: 0, left: 0, right: 0, height: "30%",
+        background: "linear-gradient(to top, rgba(0,0,0,0.35) 0%, transparent 100%)",
+        borderRadius: "0 0 22px 22px", pointerEvents: "none",
+      }} />
 
       {/* Empty state */}
       {habits.length === 0 && (

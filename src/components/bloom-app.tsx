@@ -4,8 +4,8 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check, Plus, X, Flame, ChevronLeft, ChevronRight, Coins, Sparkles,
-  Pencil, Shield, Sun, Moon, LayoutGrid, Download,
-  Users, Share2, Calendar, RefreshCw, Wind, DollarSign, Smile, Sprout, CloudMoon,
+  Pencil, Shield, Sun, Moon, LayoutGrid,
+  Users, RefreshCw, Wind, DollarSign,
   Sunrise, SunMedium, MoonStar, Menu, Store,
 } from "lucide-react";
 import { Creature } from "@/components/creature";
@@ -16,8 +16,6 @@ import { UndoToast, CoinToast } from "@/components/toast";
 import { Gallery } from "@/components/gallery";
 import { WelcomeBack } from "@/components/welcome-back";
 import { Constellation } from "@/components/constellation";
-import { WeeklyCard } from "@/components/weekly-card";
-import { BloomTogether } from "@/components/bloom-together";
 import { BreathingTimer } from "@/components/breathing-timer";
 import { HealingTimeline } from "@/components/healing-timeline";
 import { UrgeTrend } from "@/components/urge-trend";
@@ -66,10 +64,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   const [prevAllDone, setPrevAllDone] = useState(false);
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
   const [daysAwayCnt, setDaysAwayCnt] = useState(0);
-  const [showWeekly, setShowWeekly] = useState(false);
   const [bounceBackDay, setBounceBackDay] = useState(0);
-  const [bloomCode, setBloomCode] = useState("BLOOM-XXXX");
-  const [friends] = useState<{ name: string; streak: number; lastActive: string }[]>([]);
   const [quitDataMap, setQuitDataMap] = useState<Record<string, QuitData>>({});
   const [breathingHabit, setBreathingHabit] = useState<HabitWithStats | null>(null);
   const [relapseHabit, setRelapseHabit] = useState<HabitWithStats | null>(null);
@@ -87,14 +82,6 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
     if (savedDark === "1") setDarkMode(true);
     const savedSeason = localStorage.getItem("bloom_season") as SeasonKey | null;
     if (savedSeason && savedSeason in SEASONS) setSeason(savedSeason);
-    const savedCode = localStorage.getItem("bloom_code");
-    if (savedCode) {
-      setBloomCode(savedCode);
-    } else {
-      const code = `BLOOM-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-      localStorage.setItem("bloom_code", code);
-      setBloomCode(code);
-    }
 
     // Welcome back detection
     if (typeof window !== "undefined") {
@@ -197,9 +184,14 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
 
   const resetQuit = useCallback(
     (hId: string) => {
-      updateQuitData(hId, { quitDate: todayStr });
+      // Save bestStreak before resetting
+      const qd = quitDataMap[hId];
+      const currentClean = getCleanDays(hId);
+      const prevBest = qd?.bestStreak ?? 0;
+      const newBest = Math.max(currentClean, prevBest);
+      updateQuitData(hId, { quitDate: todayStr, bestStreak: newBest });
     },
-    [updateQuitData, todayStr]
+    [updateQuitData, todayStr, quitDataMap, getCleanDays]
   );
 
   const updateReason = useCallback(
@@ -228,6 +220,11 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   // Streak with freeze support
   const getStreak = useCallback(
     (hId: string) => {
+      // Quit habits: streak = clean days
+      const h = habits.find((x) => x.id === hId);
+      if (h?.category === "quit") {
+        return getCleanDays(hId);
+      }
       let s = 0;
       let d = 0;
       let gaps = 0;
@@ -245,15 +242,19 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
       }
       return s;
     },
-    [isComplete, streakFreezes]
+    [isComplete, streakFreezes, habits, getCleanDays]
   );
 
   const getTotal = useCallback(
     (hId: string) => {
+      // Quit habits: total = clean days (same as streak)
       const h = habits.find((x) => x.id === hId);
+      if (h?.category === "quit") {
+        return getCleanDays(hId);
+      }
       return h?.logs.length ?? 0;
     },
-    [habits]
+    [habits, getCleanDays]
   );
 
   const isHappy = useCallback(
@@ -271,13 +272,14 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
 
   const getStageForId = useCallback(
     (hId: string) => {
-      // Quit habits evolve based on clean days, not log count
+      // Quit habits evolve based on best streak (survives relapse), not current streak alone
       const h = habits.find((x) => x.id === hId);
       if (h?.category === "quit") {
         const qd = quitDataMap[hId];
         if (!qd?.quitDate) return 0;
         const cleanDays = daysBetween(qd.quitDate, todayStr);
-        return getStage(cleanDays);
+        const best = Math.max(cleanDays, qd.bestStreak ?? 0);
+        return getStage(best);
       }
       return getStage(getTotal(hId));
     },
@@ -298,42 +300,6 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
     }
     setPrevAllDone(allDone);
   }, [allDone, prevAllDone]);
-
-  // Share terrarium as PNG
-  const shareTerr = useCallback(() => {
-    const el = terRef.current;
-    if (!el) return;
-    const svg = el.querySelector("svg");
-    if (!svg) return;
-    const clone = svg.cloneNode(true) as SVGElement;
-    clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-    const data = new XMLSerializer().serializeToString(clone);
-    const blob = new Blob([data], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 800;
-      canvas.height = 640;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      ctx.drawImage(img, 0, 0, 800, 640);
-      ctx.fillStyle = "rgba(255,255,255,0.6)";
-      ctx.font = "bold 14px sans-serif";
-      ctx.textAlign = "right";
-      ctx.fillText("bloom.", 780, 625);
-      canvas.toBlob((b) => {
-        if (!b) return;
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(b);
-        a.download = `bloom-terrarium-${todayStr}.png`;
-        a.click();
-        URL.revokeObjectURL(url);
-        setCoinToast({ msg: "Terrarium saved!", icon: Download });
-      }, "image/png");
-    };
-    img.src = url;
-  }, [todayStr]);
 
   const checkMilestones = (habitId: string, streak: number) => {
     let nc = 0;
@@ -360,6 +326,16 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
       setEarned(ne);
     }
   };
+
+  // Check milestones for quit habits (their streaks grow passively with time)
+  useEffect(() => {
+    if (!mounted) return;
+    habits.filter((h) => h.category === "quit").forEach((h) => {
+      const cleanDays = getCleanDays(h.id);
+      if (cleanDays > 0) checkMilestones(h.id, cleanDays);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, todayStr]);
 
   const toggleCompletion = async (hId: string) => {
     const wasComplete = isHappy(hId);
@@ -418,7 +394,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
         ]);
         // Initialise quit data for quit habits
         if (cat === "quit") {
-          updateQuitData(newHabit.id, { quitDate: todayStr, dailyCost, reason: "", urges: [] });
+          updateQuitData(newHabit.id, { quitDate: todayStr, dailyCost, reason: "", urges: [], bestStreak: 0 });
         }
         setPage("main");
         setCName("");
@@ -625,11 +601,13 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 <Flame size={11} />{totalToday}/{habits.length}
               </span>
             )}
-            <div style={{
+            <div
+              onClick={() => { setPage("shop"); }}
+              style={{
               display: "inline-flex", alignItems: "center", gap: 3,
               padding: "3px 10px", borderRadius: 100,
               background: th.coinBg, color: "#d97706",
-              fontSize: 11, fontWeight: 700,
+              fontSize: 11, fontWeight: 700, cursor: "pointer",
             }}>
               <Coins size={11} />{coins}
             </div>
@@ -643,17 +621,6 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 <DollarSign size={11} />{fmtMoney(totalSaved)} saved
               </div>
             )}
-            <button
-              onClick={() => setDarkMode((d) => !d)}
-              title={darkMode ? "Light mode" : "Dark mode"}
-              style={{
-                background: th.progressBg, border: "none", borderRadius: 8,
-                padding: 5, cursor: "pointer", display: "flex", color: th.textSub,
-                transition: "all .15s",
-              }}
-            >
-              {darkMode ? <Sun size={14} /> : <Moon size={14} />}
-            </button>
             {page === "main" && (
               <button
                 onClick={() => setMenuOpen(true)}
@@ -695,7 +662,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 { label: "Constellation", Icon: Sparkles, color: "#8B5CF6", action: () => { setPage("constellation"); setMenuOpen(false); } },
                 { label: "Bloom Together", Icon: Users, color: "#4caf50", action: () => { setPage("social"); setMenuOpen(false); } },
                 { label: "World Shop", Icon: Store, color: "#f59e0b", action: () => { setPage("shop"); setMenuOpen(false); } },
-                { label: "Weekly Summary", Icon: Calendar, color: th.textSub, action: () => { setShowWeekly(true); setMenuOpen(false); } },
+                { label: darkMode ? "Light Mode" : "Dark Mode", Icon: darkMode ? Sun : Moon, color: th.textSub, action: () => { setDarkMode((d) => !d); setMenuOpen(false); } },
               ].map((item, i) => (
                 <button key={i} onClick={item.action} style={{
                   display: "flex", alignItems: "center", gap: 12, padding: "12px 8px",
@@ -737,22 +704,6 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 pct={todayPct} bouncingId={bouncingId} season={season} darkMode={darkMode}
                 ownedItems={ownedItems}
               />
-              {habits.length > 0 && (
-                <button
-                  onClick={shareTerr}
-                  title="Save terrarium image"
-                  style={{
-                    position: "absolute", top: 8, right: 8,
-                    background: "rgba(255,255,255,0.7)", backdropFilter: "blur(4px)",
-                    border: "none", borderRadius: 8, padding: 5, cursor: "pointer",
-                    display: "flex", color: "rgba(0,0,0,.35)",
-                    transition: "all .15s", zIndex: 5,
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
-                  }}
-                >
-                  <Download size={13} />
-                </button>
-              )}
               {/* Mood indicator */}
               {habits.length > 0 && (
                 <div style={{
@@ -761,7 +712,9 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                   padding: "3px 8px", fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.7)",
                   display: "flex", alignItems: "center", gap: 4, zIndex: 5,
                 }}>
-                  {allDone ? <Sparkles size={10} /> : todayPct >= 0.5 ? <Smile size={10} /> : todayPct > 0 ? <Sprout size={10} /> : <CloudMoon size={10} />}
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill={allDone ? "#FFD700" : todayPct >= 0.5 ? "#FFD700" : "none"} stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                  </svg>
                   {allDone ? "Thriving" : todayPct >= 0.5 ? "Happy" : todayPct > 0 ? "Waking up" : "Sleepy"}
                 </div>
               )}
@@ -849,7 +802,6 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                   const done = !quit && isHappy(h.id);
                   const streak = quit ? 0 : getStreak(h.id);
                   const hasFz = !quit && (streakFreezes[h.id] || 0) > 0;
-                  const Icon = getIcon(h.icon_name);
                   const cleanDays = quit ? getCleanDays(h.id) : 0;
                   const qd = quit ? getQuitData(h.id) : undefined;
                   const moneySaved = quit && qd ? (qd.dailyCost || 0) * cleanDays : 0;
@@ -882,16 +834,6 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                           <Check size={14} color="white" strokeWidth={3} />
                         </div>
                       )}
-                      <div
-                        style={{
-                          width: 24, height: 24, borderRadius: 7,
-                          background: `${h.color}${darkMode ? "18" : "0d"}`,
-                          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                        }}
-                        onClick={() => { setDetailId(h.id); setPage("detail"); }}
-                      >
-                        <Icon size={13} color={h.color} />
-                      </div>
                       <div
                         style={{ flex: 1, cursor: "pointer" }}
                         onClick={() => { setDetailId(h.id); setPage("detail"); }}
@@ -979,8 +921,8 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
             })()}
 
             {/* Next evolution preview */}
-            {buildHabits.length > 0 && (() => {
-              const closest = buildHabits
+            {habits.length > 0 && (() => {
+              const closest = habits
                 .map((h) => ({ h, stage: getStageForId(h.id), total: getTotal(h.id) }))
                 .filter((c) => c.stage < 4)
                 .map((c) => ({ ...c, next: STAGE_THRESHOLDS[c.stage + 1], remaining: STAGE_THRESHOLDS[c.stage + 1] - c.total }))
@@ -1094,8 +1036,8 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 </>
               )}
 
-              {/* Evolution progress – build habits only */}
-              {!editMode && !dq && getStageForId(detailHabit.id) < 4 &&
+              {/* Evolution progress */}
+              {!editMode && getStageForId(detailHabit.id) < 4 &&
                 (() => {
                   const st = getStageForId(detailHabit.id);
                   const tot = getTotal(detailHabit.id);
@@ -1314,21 +1256,10 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
 
         {/* ═══ SOCIAL ═══ */}
         {page === "social" && (
-          <div style={{ animation: "fadeUp 0.28s ease" }}>
-            <BloomTogether
-              habits={habits} getStage={getStageForId} isHappy={isHappy}
-              getStreak={getStreak} getTotal={getTotal}
-              bloomCode={bloomCode} friends={friends}
-              onInvite={() => {
-                if (navigator.share) {
-                  navigator.share({ title: "Bloom Together", text: `Join me on bloom! My planet code: ${bloomCode}` }).catch(() => {});
-                } else {
-                  navigator.clipboard.writeText(bloomCode);
-                  setCoinToast({ msg: "Code copied!", icon: Share2 });
-                }
-              }}
-              th={th}
-            />
+          <div style={{ animation: "fadeUp 0.28s ease", textAlign: "center", padding: "60px 20px" }}>
+            <Users size={32} color="#4caf50" style={{ marginBottom: 12, opacity: 0.5 }} />
+            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 19, fontWeight: 500, color: th.text, marginBottom: 6 }}>Bloom Together</h2>
+            <p style={{ fontSize: 13, color: th.textSub }}>Coming Soon</p>
           </div>
         )}
 
@@ -1449,15 +1380,6 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
       {/* Welcome Back modal */}
       {showWelcomeBack && (
         <WelcomeBack daysAway={daysAwayCnt} onClose={() => setShowWelcomeBack(false)} th={th} />
-      )}
-
-      {/* Weekly Summary modal */}
-      {showWeekly && (
-        <WeeklyCard
-          habits={habits} isDone={isComplete} getStreak={getStreak}
-          getTotal={getTotal} getStage={getStageForId} todayPct={todayPct}
-          coins={coins} season={season} th={th} onClose={() => setShowWeekly(false)}
-        />
       )}
     </div>
   );
