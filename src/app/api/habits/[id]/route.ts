@@ -7,7 +7,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase.from("habits").select("*").eq("id", id).single();
+  const { data, error } = await supabase.from("habits").select("*").eq("id", id).eq("user_id", userId).single();
   if (error) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(data);
 }
@@ -18,7 +18,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
   const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase.from("habits").update(body).eq("id", id).select().single();
+  const { data, error } = await supabase.from("habits").update(body).eq("id", id).eq("user_id", userId).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
 }
@@ -28,7 +28,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const supabase = await createServerSupabaseClient();
-  const { error } = await supabase.from("habits").delete().eq("id", id);
+  const { error } = await supabase.from("habits").delete().eq("id", id).eq("user_id", userId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

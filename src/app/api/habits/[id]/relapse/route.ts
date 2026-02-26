@@ -12,6 +12,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const supabase = await createServerSupabaseClient();
 
+  // Verify habit belongs to user
+  const { data: habit } = await supabase.from("habits").select("id").eq("id", id).eq("user_id", userId).single();
+  if (!habit) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   const { data, error } = await supabase
     .from("relapse_events")
     .insert({

@@ -46,19 +46,8 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   const [coins, setCoins] = useState(initialCoins);
   const [earned, setEarned] = useState<EarnedMilestones>(initialEarned);
   const [streakFreezes, setStreakFreezes] = useState<Record<string, number>>(initialStreakFreezes);
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("bloom_dark") === "1";
-    }
-    return false;
-  });
-  const [season, setSeason] = useState<SeasonKey>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("bloom_season") as SeasonKey | null;
-      if (saved && saved in SEASONS) return saved;
-    }
-    return getSeason();
-  });
+  const [darkMode, setDarkMode] = useState(false);
+  const [season, setSeason] = useState<SeasonKey>(getSeason());
   const th = THEME[darkMode ? "dark" : "light"];
   const sn = SEASONS[season];
   const [page, setPage] = useState<"main" | "detail" | "add" | "gallery" | "constellation" | "social">("main");
@@ -78,16 +67,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   const [daysAwayCnt, setDaysAwayCnt] = useState(0);
   const [showWeekly, setShowWeekly] = useState(false);
   const [bounceBackDay, setBounceBackDay] = useState(0);
-  const [bloomCode] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("bloom_code");
-      if (saved) return saved;
-      const code = `BLOOM-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-      localStorage.setItem("bloom_code", code);
-      return code;
-    }
-    return "BLOOM-XXXX";
-  });
+  const [bloomCode, setBloomCode] = useState("BLOOM-XXXX");
   const [friends] = useState<{ name: string; streak: number; lastActive: string }[]>([]);
   const [quitDataMap, setQuitDataMap] = useState<Record<string, QuitData>>({});
   const [breathingHabit, setBreathingHabit] = useState<HabitWithStats | null>(null);
@@ -98,6 +78,21 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
 
   useEffect(() => {
     setTimeout(() => setMounted(true), 50);
+
+    // Hydrate localStorage-dependent state after mount
+    const savedDark = localStorage.getItem("bloom_dark");
+    if (savedDark === "1") setDarkMode(true);
+    const savedSeason = localStorage.getItem("bloom_season") as SeasonKey | null;
+    if (savedSeason && savedSeason in SEASONS) setSeason(savedSeason);
+    const savedCode = localStorage.getItem("bloom_code");
+    if (savedCode) {
+      setBloomCode(savedCode);
+    } else {
+      const code = `BLOOM-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      localStorage.setItem("bloom_code", code);
+      setBloomCode(code);
+    }
+
     // Welcome back detection
     if (typeof window !== "undefined") {
       const lastVisit = localStorage.getItem("bloom_last_visit");
@@ -319,13 +314,16 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
       }
     }
     if (nc > 0) {
-      setCoins((p) => p + nc);
+      setCoins((prev) => {
+        const newCoins = prev + nc;
+        fetch("/api/coins", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ coins: newCoins }),
+        }).catch(() => {});
+        return newCoins;
+      });
       setEarned(ne);
-      fetch("/api/coins", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ coins: coins + nc, earned: ne }),
-      }).catch(() => {});
     }
   };
 
@@ -368,9 +366,10 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
     }
   };
 
+  const [addError, setAddError] = useState("");
+
   const addHabit = async (name: string, color: string, iconName: string, cat: string = "general", dailyCost: number = 0) => {
-    setPage("main");
-    setCName("");
+    setAddError("");
     try {
       const res = await fetch("/api/habits", {
         method: "POST",
@@ -387,9 +386,14 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
         if (cat === "quit") {
           updateQuitData(newHabit.id, { quitDate: todayStr, dailyCost, reason: "", urges: [] });
         }
+        setPage("main");
+        setCName("");
+      } else {
+        const err = await res.json().catch(() => null);
+        setAddError(err?.error || "Failed to add habit. Please try again.");
       }
     } catch {
-      router.refresh();
+      setAddError("Network error. Please try again.");
     }
   };
 
@@ -437,22 +441,18 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
 
   const buyFreeze = async (hId: string) => {
     if (coins < 50) return;
-    setCoins((p) => p - 50);
-    setStreakFreezes((p) => ({ ...p, [hId]: (p[hId] || 0) + 1 }));
+    const newFreezes = { ...streakFreezes, [hId]: (streakFreezes[hId] || 0) + 1 };
+    setStreakFreezes(newFreezes);
     setCoinToast({ msg: "Streak freeze activated!", icon: Shield });
-    try {
-      await fetch("/api/coins", {
+    setCoins((prev) => {
+      const newCoins = prev - 50;
+      fetch("/api/coins", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          coins: coins - 50,
-          earned,
-          streakFreezes: { ...streakFreezes, [hId]: (streakFreezes[hId] || 0) + 1 },
-        }),
-      });
-    } catch {
-      router.refresh();
-    }
+        body: JSON.stringify({ coins: newCoins, streakFreezes: newFreezes }),
+      }).catch(() => router.refresh());
+      return newCoins;
+    });
   };
 
   // Bounce-back recovery: check once per day when any habit is completed
@@ -1373,6 +1373,9 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                   Add
                 </button>
               </div>
+              {addError && (
+                <div style={{ marginTop: 8, color: "#ef4444", fontSize: 12, fontWeight: 500 }}>{addError}</div>
+              )}
             </div>
           </div>
         </div>

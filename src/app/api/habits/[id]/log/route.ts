@@ -11,6 +11,11 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const supabase = await createServerSupabaseClient();
+
+  // Verify habit belongs to user
+  const { data: habit } = await supabase.from("habits").select("id").eq("id", id).eq("user_id", userId).single();
+  if (!habit) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   const today = new Date().toISOString().split("T")[0];
 
   // Check if already logged today
@@ -85,6 +90,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   const supabase = await createServerSupabaseClient();
+
+  // Verify habit belongs to user
+  const { data: habit } = await supabase.from("habits").select("id").eq("id", id).eq("user_id", userId).single();
+  if (!habit) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const { data, error } = await supabase
     .from("milestones")

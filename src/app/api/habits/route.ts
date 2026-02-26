@@ -10,6 +10,7 @@ export async function GET() {
   const { data, error } = await supabase
     .from("habits")
     .select("*")
+    .eq("user_id", userId)
     .eq("is_archived", false)
     .order("sort_order");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -43,12 +44,16 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  if (!name || name.length > 100) {
+    return NextResponse.json({ error: "Habit name is required (max 100 characters)." }, { status: 400 });
+  }
 
   const { data, error } = await supabase
     .from("habits")
     .insert({
       user_id: userId,
-      name: body.name,
+      name,
       color: body.color || "#6366f1",
       icon_name: body.icon_name || "Target",
       category: body.category || "general",

@@ -17,6 +17,7 @@ create table if not exists public.profiles (
   avatar_url   text,
   tier         text not null default 'free' check (tier in ('free', 'pro')),
   coins        int not null default 0,
+  streak_freezes jsonb not null default '{}',
   stripe_customer_id     text,
   stripe_subscription_id text,
   created_at   timestamptz not null default now(),
@@ -200,3 +201,4 @@ create policy "Users can update own milestones"
 -- ALTER TABLE public.habits DROP COLUMN IF EXISTS description;
 -- ALTER TABLE public.habits DROP COLUMN IF EXISTS frequency;
 -- ALTER TABLE public.habits DROP COLUMN IF EXISTS custom_days;
+-- ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS streak_freezes jsonb NOT NULL DEFAULT '{}';

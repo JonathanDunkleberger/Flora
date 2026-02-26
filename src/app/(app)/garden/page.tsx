@@ -13,6 +13,7 @@ export default async function GardenPage() {
   const { data: habits } = await supabase
     .from("habits")
     .select("*")
+    .eq("user_id", userId)
     .eq("is_archived", false)
     .order("sort_order", { ascending: true });
 
@@ -25,11 +26,26 @@ export default async function GardenPage() {
     : { data: [] };
 
   // Fetch profile for coins + streak_freezes
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("coins, streak_freezes")
-    .eq("clerk_id", userId)
-    .single();
+  // Try with streak_freezes first; fall back to coins-only if column doesn't exist yet
+  let profile: { coins: number; streak_freezes?: Record<string, number> } | null = null;
+  {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("coins, streak_freezes")
+      .eq("clerk_id", userId)
+      .single();
+    if (!error) {
+      profile = data;
+    } else {
+      // streak_freezes column may not exist yet – fetch coins only
+      const { data: fallback } = await supabase
+        .from("profiles")
+        .select("coins")
+        .eq("clerk_id", userId)
+        .single();
+      profile = fallback ? { ...fallback, streak_freezes: {} } : null;
+    }
+  }
 
   // Fetch earned milestones
   const { data: milestones } = await supabase
