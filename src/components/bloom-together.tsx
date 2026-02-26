@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Users, Share2, Sparkles, ArrowRight } from "lucide-react";
+import { Copy, Users, Share2, Sprout, Flame } from "lucide-react";
 import type { ThemeColors } from "@/lib/constants";
 import type { HabitWithStats } from "@/types";
 
@@ -37,6 +37,13 @@ export function BloomTogether({ habits, getStage, isHappy, getStreak, getTotal, 
         </div>
         <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 22, color: th.text, fontWeight: 500, marginBottom: 4 }}>Bloom Together</h2>
         <p style={{ fontSize: 12, color: th.textSub, lineHeight: 1.5 }}>Share your planet code with friends to connect your gardens</p>
+        <div style={{
+          display: "inline-block", marginTop: 8, padding: "4px 12px", borderRadius: 20,
+          background: "rgba(76,175,80,0.08)", fontSize: 10, fontWeight: 600,
+          color: "#4caf50", letterSpacing: "0.3px",
+        }}>
+          Friend connections coming soon
+        </div>
       </div>
 
       {/* Planet Code Card */}
@@ -82,12 +89,12 @@ export function BloomTogether({ habits, getStage, isHappy, getStreak, getTotal, 
                 width: 32, height: 32, borderRadius: "50%",
                 background: `linear-gradient(135deg,${["#4caf50", "#8B5CF6", "#FF9100"][i % 3]},${["#66FFAA", "#C084FC", "#FFB74D"][i % 3]})`,
                 display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
-              }}>🌱</div>
+              }}><Sprout size={14} color="white" /></div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: th.text }}>{f.name}</div>
                 <div style={{ fontSize: 10, color: th.textSub }}>{f.lastActive}</div>
               </div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#4caf50" }}>🔥 {f.streak}d</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#4caf50", display: "flex", alignItems: "center", gap: 3 }}><Flame size={10} />{f.streak}d</div>
             </div>
           ))}
         </div>

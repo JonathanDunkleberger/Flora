@@ -3,6 +3,7 @@
 import { Sparkles } from "lucide-react";
 import { seed } from "@/lib/utils";
 import { SEASONS } from "@/lib/constants";
+import { PlanetItem } from "@/components/planet-items";
 import type { HabitWithStats } from "@/types";
 import type { SeasonKey } from "@/lib/constants";
 
@@ -14,11 +15,12 @@ interface TerrariumSceneProps {
   bouncingId: string | null;
   season?: SeasonKey;
   darkMode?: boolean;
+  ownedItems?: string[];
 }
 
 export function TerrariumScene({
   habits, getStage, isHappy, pct, bouncingId,
-  season = "summer", darkMode = false,
+  season = "summer", darkMode = false, ownedItems = [],
 }: TerrariumSceneProps) {
   const allDone = pct >= 1 && habits.length > 0;
   const half = pct >= 0.5;
@@ -26,11 +28,11 @@ export function TerrariumScene({
   const sr = seed;
 
   // Planet center & radius
-  const cx = 200, cy = 175, pr = 72 + pct * 8;
+  const cx = 200, cy = 190, pr = 85 + pct * 10;
 
   // Distribute creatures evenly around the top arc of planet
   const creatureAngles = habits.map((_, i) => {
-    const spread = Math.min(habits.length * 28, 160);
+    const spread = Math.min(habits.length * 32, 170);
     const start = -90 - spread / 2;
     return start + (habits.length === 1 ? 0 : i * (spread / (habits.length - 1)));
   });
@@ -55,12 +57,12 @@ export function TerrariumScene({
 
   return (
     <div style={{
-      position: "relative", width: "100%", aspectRatio: "5/4", borderRadius: 22, overflow: "hidden",
+      position: "relative", width: "100%", aspectRatio: "4/3", borderRadius: 22, overflow: "hidden",
       background: `radial-gradient(ellipse at 50% 60%, ${sky[2]} 0%, ${sky[1]} 40%, ${sky[0]} 100%)`,
       transition: "background 1.5s ease",
       boxShadow: "0 2px 24px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.05)",
     }}>
-      <svg width="100%" height="100%" viewBox="0 0 400 320" preserveAspectRatio="xMidYMid meet" style={{ position: "absolute", inset: 0 }}>
+      <svg width="100%" height="100%" viewBox="0 0 400 350" preserveAspectRatio="xMidYMid meet" style={{ position: "absolute", inset: 0 }}>
         <defs>
           <radialGradient id="lp-planet" cx="40%" cy="35%" r="60%">
             <stop offset="0%" stopColor={pc.base} />
@@ -85,7 +87,7 @@ export function TerrariumScene({
         {/* ── STARFIELD ── */}
         {Array.from({ length: 40 + Math.floor(pct * 30) }).map((_, i) => {
           const r = sr(i * 37 + 7);
-          const sx = r() * 400, sy = r() * 320;
+          const sx = r() * 400, sy = r() * 350;
           const sz = 0.4 + r() * (pct > 0.5 ? 1.4 : 0.8);
           return (
             <circle key={`s${i}`} cx={sx} cy={sy} r={sz} fill="white" opacity={0.15 + r() * 0.45}>
@@ -155,7 +157,7 @@ export function TerrariumScene({
         })}
 
         {/* ── SURFACE DETAILS: grass, flowers along top arc ── */}
-        {Array.from({ length: 20 + Math.floor(pct * 20) }).map((_, i) => {
+        {Array.from({ length: 28 + Math.floor(pct * 24) }).map((_, i) => {
           const r = sr(i * 47 + 33);
           const angle = (-140 + r() * 280) * Math.PI / 180;
           const sx = cx + Math.cos(angle) * (pr - 1), sy = cy + Math.sin(angle) * (pr - 1);
@@ -170,7 +172,7 @@ export function TerrariumScene({
         })}
 
         {/* Flowers on surface */}
-        {Array.from({ length: Math.floor(pct * 12) }).map((_, i) => {
+        {Array.from({ length: Math.floor(pct * 16) }).map((_, i) => {
           const r = sr(i * 89 + 51);
           const angle = (-120 + r() * 240) * Math.PI / 180;
           const fx = cx + Math.cos(angle) * (pr + 1), fy = cy + Math.sin(angle) * (pr + 1);
@@ -180,6 +182,18 @@ export function TerrariumScene({
               <circle cx={fx} cy={fy} r={1.5 + r() * 1.5} fill={fc} opacity={0.7 + r() * 0.2} />
               <circle cx={fx} cy={fy} r={0.6 + r() * 0.4} fill="#FFF8DC" opacity="0.8" />
             </g>
+          );
+        })}
+
+        {/* ── OWNED SHOP ITEMS on planet surface ── */}
+        {ownedItems.map((itemId, i) => {
+          const r = sr(itemId.charCodeAt(0) * 17 + i * 73);
+          const angle = (-140 + r() * 280) * Math.PI / 180;
+          const ix = cx + Math.cos(angle) * (pr + 1);
+          const iy = cy + Math.sin(angle) * (pr + 1);
+          const rotDeg = (angle * 180 / Math.PI) + 90;
+          return (
+            <PlanetItem key={itemId} id={itemId} x={ix} y={iy} rotation={rotDeg} scale={0.8} />
           );
         })}
 
@@ -228,8 +242,8 @@ export function TerrariumScene({
           const py = cy + Math.sin(angleRad) * (pr + 2);
           const rotDeg = angleDeg + 90;
 
-          const mx = habits.length > 6 ? 28 : habits.length > 4 ? 34 : habits.length > 3 ? 40 : 48;
-          const sz = Math.min(34 + st * 4, mx);
+          const mx = habits.length > 6 ? 36 : habits.length > 4 ? 42 : habits.length > 3 ? 50 : 58;
+          const sz = Math.min(40 + st * 5, mx);
           const scale = sz / 52;
 
           return (
@@ -269,7 +283,7 @@ export function TerrariumScene({
                   {st >= 4 && <path d="M-5,-8 L-3,-14 L0,-10 L3,-14 L5,-8Z" fill="#FFD700" opacity="0.7" />}
                 </g>
                 {/* Name label */}
-                <text y={sz / 2 + 8} textAnchor="middle" fontSize="7" fill="rgba(255,255,255,0.55)" fontWeight="600"
+                <text y={sz / 2 + 8} textAnchor="middle" fontSize="8.5" fill="rgba(255,255,255,0.7)" fontWeight="600"
                   style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>{h.name}</text>
               </g>
             </g>
@@ -282,7 +296,7 @@ export function TerrariumScene({
           const x = r() * 400, startY = -10 - r() * 60;
           return (
             <circle key={`sn${i}`} cx={x} cy={startY} r={1 + r() * 1.5} fill="white" opacity={0.3 + r() * 0.3}>
-              <animate attributeName="cy" values={`${startY};320`} dur={`${5 + r() * 7}s`} repeatCount="indefinite" />
+              <animate attributeName="cy" values={`${startY};350`} dur={`${5 + r() * 7}s`} repeatCount="indefinite" />
               <animate attributeName="cx" values={`${x};${x + 10 - r() * 20};${x}`} dur={`${4 + r() * 5}s`} repeatCount="indefinite" />
             </circle>
           );
@@ -293,7 +307,7 @@ export function TerrariumScene({
           return (
             <ellipse key={`pt${i}`} cx={x} cy={startY} rx={1.5 + r() * 1.5} ry={1 + r()} fill={sn.flowerColors[Math.floor(r() * 5)]}
               opacity={0.3 + r() * 0.25}>
-              <animate attributeName="cy" values={`${startY};320`} dur={`${6 + r() * 8}s`} repeatCount="indefinite" />
+              <animate attributeName="cy" values={`${startY};350`} dur={`${6 + r() * 8}s`} repeatCount="indefinite" />
               <animate attributeName="cx" values={`${x};${x + 15 - r() * 30};${x}`} dur={`${5 + r() * 5}s`} repeatCount="indefinite" />
               <animateTransform attributeName="transform" type="rotate" values={`0 ${x} ${startY};360 ${x} ${startY}`} dur={`${3 + r() * 3}s`} repeatCount="indefinite" />
             </ellipse>
@@ -305,7 +319,7 @@ export function TerrariumScene({
           const lc = sn.flowerColors[Math.floor(r() * 5)];
           return (
             <path key={`lf${i}`} d={`M${x},${startY} q2,-3 1,-5 q-2,1 -1,5z`} fill={lc} opacity={0.3 + r() * 0.25}>
-              <animate attributeName="cy" values={`${startY};320`} dur={`${5 + r() * 7}s`} repeatCount="indefinite" />
+              <animate attributeName="cy" values={`${startY};350`} dur={`${5 + r() * 7}s`} repeatCount="indefinite" />
               <animateTransform attributeName="transform" type="rotate" values={`0 ${x} ${startY};360 ${x} ${startY}`} dur={`${4 + r() * 4}s`} repeatCount="indefinite" />
             </path>
           );

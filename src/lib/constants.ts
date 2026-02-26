@@ -143,16 +143,16 @@ export const THEME: Record<"light" | "dark", ThemeColors> = {
 
 /* ═══════════ FAIL RECOVERY & WELCOME BACK ═══════════ */
 export const WELCOME_MSGS = [
-  { title: "Welcome back! 🌱", body: "Your creatures missed you. They've been napping — let's wake them up together.", vibe: "warm" },
-  { title: "Hey, you came back! 💚", body: "That's the hard part done. One check-in and your planet starts glowing again.", vibe: "proud" },
-  { title: "Fresh start energy ✨", body: "Streaks break. What matters is you're here now. Your creatures are stretching and ready.", vibe: "fresh" },
-  { title: "Look who's back! 🪐", body: "Your planet kept spinning while you were away. Time to make it bloom again.", vibe: "playful" },
+  { title: "Welcome back!", body: "Your creatures missed you. They've been napping — let's wake them up together.", vibe: "warm" },
+  { title: "Hey, you came back!", body: "That's the hard part done. One check-in and your planet starts glowing again.", vibe: "proud" },
+  { title: "Fresh start energy", body: "Streaks break. What matters is you're here now. Your creatures are stretching and ready.", vibe: "fresh" },
+  { title: "Look who's back!", body: "Your planet kept spinning while you were away. Time to make it bloom again.", vibe: "playful" },
 ] as const;
 
 export const BOUNCE_BACK = [
-  { d: 1, msg: "Day 1 again — you showed up 💪", c: 3 },
-  { d: 3, msg: "3 days strong! Bounce-back streak 🔥", c: 10 },
-  { d: 7, msg: "Full week recovery! Your creatures are thriving 🌟", c: 25 },
+  { d: 1, msg: "Day 1 again — you showed up", c: 3 },
+  { d: 3, msg: "3 days strong! Bounce-back streak", c: 10 },
+  { d: 7, msg: "Full week recovery! Your creatures are thriving", c: 25 },
 ] as const;
 
 export const SYNERGY_NAMES: Record<string, string> = {
@@ -229,6 +229,43 @@ export const HEAL: Record<string, HealStep[]> = {
     { d: 90, t: "Three months — deeply rooted", desc: "Neurological changes are now well-established." },
   ],
 };
+
+/* ═══════════ WORLD SHOP ═══════════ */
+import type { ShopItem, ShopCategory } from "@/types";
+
+export const SHOP_CATEGORIES: { key: ShopCategory; label: string }[] = [
+  { key: "landscape", label: "Landscape" },
+  { key: "trees", label: "Trees" },
+  { key: "flowers", label: "Flowers" },
+  { key: "decorations", label: "Decorations" },
+];
+
+export const SHOP_ITEMS: ShopItem[] = [
+  // Landscape
+  { id: "pond", name: "Pond", description: "A small reflective pool", price: 30, category: "landscape" },
+  { id: "bridge", name: "Bridge", description: "A tiny wooden bridge", price: 40, category: "landscape" },
+  { id: "bench", name: "Bench", description: "A cozy resting spot", price: 20, category: "landscape" },
+  { id: "fence", name: "Fence", description: "A picket fence section", price: 15, category: "landscape" },
+  { id: "stone-path", name: "Stone Path", description: "Stepping stones", price: 25, category: "landscape" },
+
+  // Trees
+  { id: "sakura", name: "Sakura", description: "Pink cherry blossoms", price: 60, category: "trees" },
+  { id: "pine", name: "Pine", description: "An evergreen pine tree", price: 45, category: "trees" },
+  { id: "willow", name: "Willow", description: "A graceful weeping willow", price: 55, category: "trees" },
+  { id: "oak", name: "Oak", description: "A sturdy old oak", price: 75, category: "trees" },
+
+  // Flowers
+  { id: "tulips", name: "Tulips", description: "A patch of colorful tulips", price: 10, category: "flowers" },
+  { id: "sunflowers", name: "Sunflowers", description: "Tall golden sunflowers", price: 15, category: "flowers" },
+  { id: "roses", name: "Roses", description: "A rose bush in bloom", price: 18, category: "flowers" },
+  { id: "lavender", name: "Lavender", description: "Fragrant purple lavender", price: 12, category: "flowers" },
+
+  // Decorations
+  { id: "lantern", name: "Lantern", description: "A warm glowing lantern", price: 20, category: "decorations" },
+  { id: "mushrooms", name: "Mushrooms", description: "A cluster of spotted caps", price: 8, category: "decorations" },
+  { id: "rock-garden", name: "Rock Garden", description: "Zen stacked stones", price: 25, category: "decorations" },
+  { id: "birdhouse", name: "Birdhouse", description: "A tiny house on a pole", price: 18, category: "decorations" },
+];
 
 export function getHealKey(name: string): string {
   const n = name.toLowerCase();

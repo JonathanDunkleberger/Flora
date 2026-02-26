@@ -4,8 +4,9 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check, Plus, X, Flame, ChevronLeft, ChevronRight, Coins, Sparkles,
-  Pencil, Shield, Sun, Moon, LayoutGrid, Download, Snowflake, Flower, Leaf, SunDim,
-  Users, Share2, Calendar, RefreshCw, Wind, DollarSign,
+  Pencil, Shield, Sun, Moon, LayoutGrid, Download,
+  Users, Share2, Calendar, RefreshCw, Wind, DollarSign, Smile, Sprout, CloudMoon,
+  Sunrise, SunMedium, MoonStar, Menu, Store,
 } from "lucide-react";
 import { Creature } from "@/components/creature";
 import { TerrariumScene } from "@/components/terrarium-scene";
@@ -22,12 +23,13 @@ import { HealingTimeline } from "@/components/healing-timeline";
 import { UrgeTrend } from "@/components/urge-trend";
 import { RelapseModal } from "@/components/relapse-modal";
 import { ReasonEditor } from "@/components/reason-editor";
+import { Shop } from "@/components/shop";
 import { getStage, getIcon, today, daysAgo, daysBetween, fmtDuration, fmtMoney } from "@/lib/utils";
 import {
   MILESTONES, STAGE_LABELS, STAGE_THRESHOLDS,
   PRESETS, PRESET_CATEGORIES, HABIT_COLORS,
   SEASONS, getSeason, THEME, BOUNCE_BACK,
-  QUIT_PRESETS,
+  QUIT_PRESETS, SHOP_ITEMS,
 } from "@/lib/constants";
 import type { HabitWithStats, EarnedMilestones, QuitData } from "@/types";
 import type { LucideIcon } from "lucide-react";
@@ -49,8 +51,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   const [darkMode, setDarkMode] = useState(false);
   const [season, setSeason] = useState<SeasonKey>(getSeason());
   const th = THEME[darkMode ? "dark" : "light"];
-  const sn = SEASONS[season];
-  const [page, setPage] = useState<"main" | "detail" | "add" | "gallery" | "constellation" | "social">("main");
+  const [page, setPage] = useState<"main" | "detail" | "add" | "gallery" | "constellation" | "social" | "shop">("main");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [coinToast, setCoinToast] = useState<{ msg: string; icon: LucideIcon } | null>(null);
   const [undoToast, setUndoToast] = useState<{ msg: string; onUndo: () => void } | null>(null);
@@ -72,6 +73,8 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   const [quitDataMap, setQuitDataMap] = useState<Record<string, QuitData>>({});
   const [breathingHabit, setBreathingHabit] = useState<HabitWithStats | null>(null);
   const [relapseHabit, setRelapseHabit] = useState<HabitWithStats | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [ownedItems, setOwnedItems] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const editRef = useRef<HTMLInputElement>(null);
   const terRef = useRef<HTMLDivElement>(null);
@@ -112,6 +115,12 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
         const raw = localStorage.getItem("bloom_quit_data");
         if (raw) setQuitDataMap(JSON.parse(raw));
       } catch { /* ignore */ }
+
+      // Load owned shop items
+      try {
+        const rawItems = localStorage.getItem("bloom_owned_items");
+        if (rawItems) setOwnedItems(JSON.parse(rawItems));
+      } catch { /* ignore */ }
     }
   }, []);
 
@@ -121,6 +130,13 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
       localStorage.setItem("bloom_quit_data", JSON.stringify(quitDataMap));
     }
   }, [quitDataMap]);
+
+  // Persist owned items
+  useEffect(() => {
+    if (typeof window !== "undefined" && ownedItems.length > 0) {
+      localStorage.setItem("bloom_owned_items", JSON.stringify(ownedItems));
+    }
+  }, [ownedItems]);
 
   // Persist dark mode & season
   useEffect(() => {
@@ -455,6 +471,23 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
     });
   };
 
+  const buyItem = (itemId: string) => {
+    const item = SHOP_ITEMS.find((i) => i.id === itemId);
+    if (!item || ownedItems.includes(itemId)) return;
+    if (coins < item.price) return;
+    setOwnedItems((prev) => [...prev, itemId]);
+    setCoinToast({ msg: `${item.name} placed on your planet!`, icon: Store });
+    setCoins((prev) => {
+      const newCoins = prev - item.price;
+      fetch("/api/coins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ coins: newCoins }),
+      }).catch(() => router.refresh());
+      return newCoins;
+    });
+  };
+
   // Bounce-back recovery: check once per day when any habit is completed
   useEffect(() => {
     if (!mounted || !habits.length || bounceBackDay < 0) return;
@@ -526,7 +559,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
       {breathingHabit && (
         <BreathingTimer
           habit={breathingHabit}
-          onComplete={() => { setBreathingHabit(null); setCoinToast({ msg: "Urge surfed! 🌊", icon: Wind }); }}
+          onComplete={() => { setBreathingHabit(null); setCoinToast({ msg: "Urge surfed!", icon: Wind }); }}
           onClose={() => setBreathingHabit(null)}
           th={th}
         />
@@ -537,7 +570,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
         <RelapseModal
           habit={relapseHabit}
           cleanDays={getCleanDays(relapseHabit.id)}
-          onConfirm={() => { resetQuit(relapseHabit.id); setRelapseHabit(null); setCoinToast({ msg: "Counter reset. You've got this 💚", icon: RefreshCw }); }}
+          onConfirm={() => { resetQuit(relapseHabit.id); setRelapseHabit(null); setCoinToast({ msg: "Counter reset. You've got this.", icon: RefreshCw }); }}
           onClose={() => setRelapseHabit(null)}
           th={th}
         />
@@ -563,91 +596,17 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
             </h1>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            {page === "main" && (
-              <>
-                {buildHabits.length > 0 && (
-                  <span style={{
-                    fontSize: 11, fontWeight: 700,
-                    color: allDone ? "#4caf50" : th.textMuted,
-                    background: allDone ? "rgba(76,175,80,.08)" : th.progressBg,
-                    padding: "3px 10px", borderRadius: 100,
-                    display: "flex", alignItems: "center", gap: 3, transition: "all .3s",
-                  }}>
-                    <Flame size={11} />{totalToday}/{buildHabits.length}
-                  </span>
-                )}
-                <button
-                  onClick={() => setPage("gallery")}
-                  title="Collection"
-                  style={{
-                    background: th.progressBg, border: "none", borderRadius: 8,
-                    padding: 5, cursor: "pointer", display: "flex", color: th.textSub,
-                    transition: "all .15s",
-                  }}
-                >
-                  <LayoutGrid size={14} />
-                </button>
-                <button
-                  onClick={() => setPage("constellation")}
-                  title="Constellation"
-                  style={{
-                    background: th.progressBg, border: "none", borderRadius: 8,
-                    padding: 5, cursor: "pointer", display: "flex", color: "#8B5CF6",
-                    transition: "all .15s",
-                  }}
-                >
-                  <Sparkles size={14} />
-                </button>
-                <button
-                  onClick={() => setPage("social")}
-                  title="Bloom Together"
-                  style={{
-                    background: th.progressBg, border: "none", borderRadius: 8,
-                    padding: 5, cursor: "pointer", display: "flex", color: "#4caf50",
-                    transition: "all .15s",
-                  }}
-                >
-                  <Users size={14} />
-                </button>
-                <button
-                  onClick={() => setShowWeekly(true)}
-                  title="Weekly Summary"
-                  style={{
-                    background: th.progressBg, border: "none", borderRadius: 8,
-                    padding: 5, cursor: "pointer", display: "flex", color: th.textSub,
-                    transition: "all .15s",
-                  }}
-                >
-                  <Calendar size={14} />
-                </button>
-                <button
-                  onClick={() => {
-                    const ss: SeasonKey[] = ["spring", "summer", "autumn", "winter"];
-                    setSeason(ss[(ss.indexOf(season) + 1) % 4]);
-                  }}
-                  title={`Season: ${sn.label}`}
-                  style={{
-                    background: th.progressBg, border: "none", borderRadius: 8,
-                    padding: 5, cursor: "pointer", display: "flex",
-                    color: season === "winter" ? "#6EA8D4" : season === "autumn" ? "#D4741C" : season === "spring" ? "#E8A0BF" : "#F0C040",
-                    transition: "all .15s",
-                  }}
-                >
-                  {season === "winter" ? <Snowflake size={14} /> : season === "autumn" ? <Leaf size={14} /> : season === "spring" ? <Flower size={14} /> : <SunDim size={14} />}
-                </button>
-              </>
+            {page === "main" && buildHabits.length > 0 && (
+              <span style={{
+                fontSize: 11, fontWeight: 700,
+                color: allDone ? "#4caf50" : th.textMuted,
+                background: allDone ? "rgba(76,175,80,.08)" : th.progressBg,
+                padding: "3px 10px", borderRadius: 100,
+                display: "flex", alignItems: "center", gap: 3, transition: "all .3s",
+              }}>
+                <Flame size={11} />{totalToday}/{buildHabits.length}
+              </span>
             )}
-            <button
-              onClick={() => setDarkMode((d) => !d)}
-              title={darkMode ? "Light mode" : "Dark mode"}
-              style={{
-                background: th.progressBg, border: "none", borderRadius: 8,
-                padding: 5, cursor: "pointer", display: "flex", color: th.textSub,
-                transition: "all .15s",
-              }}
-            >
-              {darkMode ? <Sun size={14} /> : <Moon size={14} />}
-            </button>
             <div style={{
               display: "inline-flex", alignItems: "center", gap: 3,
               padding: "3px 10px", borderRadius: 100,
@@ -666,8 +625,90 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 <DollarSign size={11} />{fmtMoney(totalSaved)} saved
               </div>
             )}
+            <button
+              onClick={() => setDarkMode((d) => !d)}
+              title={darkMode ? "Light mode" : "Dark mode"}
+              style={{
+                background: th.progressBg, border: "none", borderRadius: 8,
+                padding: 5, cursor: "pointer", display: "flex", color: th.textSub,
+                transition: "all .15s",
+              }}
+            >
+              {darkMode ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+            {page === "main" && (
+              <button
+                onClick={() => setMenuOpen(true)}
+                title="Menu"
+                style={{
+                  background: th.progressBg, border: "none", borderRadius: 8,
+                  padding: 5, cursor: "pointer", display: "flex", color: th.textSub,
+                  transition: "all .15s",
+                }}
+              >
+                <Menu size={16} />
+              </button>
+            )}
           </div>
         </div>
+
+        {/* SLIDE-OUT MENU */}
+        {menuOpen && (
+          <>
+            <div onClick={() => setMenuOpen(false)} style={{
+              position: "fixed", inset: 0, background: th.overlayBg,
+              zIndex: 90, animation: "fi .15s ease",
+            }} />
+            <div style={{
+              position: "fixed", top: 0, right: 0, bottom: 0, width: 280,
+              background: th.modalBg, zIndex: 91, padding: "24px 20px",
+              animation: "slideFromRight .25s cubic-bezier(.16,1,.3,1)",
+              boxShadow: "-4px 0 24px rgba(0,0,0,0.15)",
+              display: "flex", flexDirection: "column", gap: 4,
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: th.text }}>Menu</span>
+                <button onClick={() => setMenuOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: th.textSub, display: "flex" }}>
+                  <X size={18} />
+                </button>
+              </div>
+              {[
+                { label: "Collection", Icon: LayoutGrid, color: th.textSub, action: () => { setPage("gallery"); setMenuOpen(false); } },
+                { label: "Constellation", Icon: Sparkles, color: "#8B5CF6", action: () => { setPage("constellation"); setMenuOpen(false); } },
+                { label: "Bloom Together", Icon: Users, color: "#4caf50", action: () => { setPage("social"); setMenuOpen(false); } },
+                { label: "World Shop", Icon: Store, color: "#f59e0b", action: () => { setPage("shop"); setMenuOpen(false); } },
+                { label: "Weekly Summary", Icon: Calendar, color: th.textSub, action: () => { setShowWeekly(true); setMenuOpen(false); } },
+              ].map((item, i) => (
+                <button key={i} onClick={item.action} style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "12px 8px",
+                  background: "none", border: "none", borderRadius: 12,
+                  cursor: "pointer", fontFamily: "inherit", fontSize: 14,
+                  fontWeight: 500, color: th.text, width: "100%", textAlign: "left",
+                }}>
+                  <item.Icon size={18} color={item.color} />
+                  {item.label}
+                </button>
+              ))}
+              <div style={{ height: 1, background: th.cardBorder, margin: "8px 0" }} />
+              <div style={{ padding: "8px" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: th.textMuted }}>Season</span>
+                <div style={{ display: "flex", gap: 4, marginTop: 8 }}>
+                  {(["spring", "summer", "autumn", "winter"] as SeasonKey[]).map((s) => (
+                    <button key={s} onClick={() => setSeason(s)} style={{
+                      padding: "5px 10px", borderRadius: 8, border: "none",
+                      background: season === s ? (darkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)") : "transparent",
+                      cursor: "pointer", fontSize: 11, fontWeight: 600,
+                      color: season === s ? th.text : th.textMuted, fontFamily: "inherit",
+                      transition: "all .15s",
+                    }}>
+                      {SEASONS[s].label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* ═══ MAIN ═══ */}
         {page === "main" && (
@@ -676,6 +717,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
               <TerrariumScene
                 habits={buildHabits} getStage={getStageForId} isHappy={isHappy}
                 pct={todayPct} bouncingId={bouncingId} season={season} darkMode={darkMode}
+                ownedItems={ownedItems}
               />
               {habits.length > 0 && (
                 <button
@@ -701,7 +743,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                   padding: "3px 8px", fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.7)",
                   display: "flex", alignItems: "center", gap: 4, zIndex: 5,
                 }}>
-                  <span>{allDone ? "🌟" : todayPct >= 0.5 ? "😊" : todayPct > 0 ? "🌱" : "😴"}</span>
+                  {allDone ? <Sparkles size={10} /> : todayPct >= 0.5 ? <Smile size={10} /> : todayPct > 0 ? <Sprout size={10} /> : <CloudMoon size={10} />}
                   {allDone ? "Thriving" : todayPct >= 0.5 ? "Happy" : todayPct > 0 ? "Waking up" : "Sleepy"}
                 </div>
               )}
@@ -752,17 +794,17 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
             {totalToday === 0 && buildHabits.length > 0 && (() => {
               const hr = new Date().getHours();
               const nudge = hr < 12
-                ? { emoji: "🌅", msg: "Good morning! A small step forward today?" }
+                ? { Icon: Sunrise, msg: "Good morning! A small step forward today?" }
                 : hr < 17
-                  ? { emoji: "☀️", msg: "Afternoon check-in — any habits to bloom?" }
-                  : { emoji: "🌙", msg: "Evening wind-down — still time to grow today" };
+                  ? { Icon: SunMedium, msg: "Afternoon check-in — any habits to bloom?" }
+                  : { Icon: MoonStar, msg: "Evening wind-down — still time to grow today" };
               return (
                 <div style={{
                   margin: "8px 2px 0", padding: "10px 14px", borderRadius: 12,
                   background: th.card, border: `1px solid ${th.cardBorder}`,
                   display: "flex", alignItems: "center", gap: 10,
                 }}>
-                  <span style={{ fontSize: 18 }}>{nudge.emoji}</span>
+                  <nudge.Icon size={18} color={th.textSub} />
                   <span style={{ fontSize: 12, color: th.textSub, fontWeight: 500 }}>{nudge.msg}</span>
                 </div>
               );
@@ -858,7 +900,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                       >
                         {quit ? (
                           <button
-                            onClick={(e) => { e.stopPropagation(); logUrge(h.id); setCoinToast({ msg: "Urge resisted 💪", icon: Wind }); }}
+                            onClick={(e) => { e.stopPropagation(); logUrge(h.id); setCoinToast({ msg: "Urge resisted", icon: Wind }); }}
                             style={{
                               fontSize: 9, fontWeight: 700, padding: "3px 9px", borderRadius: 100,
                               background: `${h.color}12`, color: h.color,
@@ -1270,6 +1312,11 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
               th={th}
             />
           </div>
+        )}
+
+        {/* ═══ SHOP ═══ */}
+        {page === "shop" && (
+          <Shop coins={coins} ownedItems={ownedItems} onBuy={buyItem} th={th} />
         )}
       </div>
 

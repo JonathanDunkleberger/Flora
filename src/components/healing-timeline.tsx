@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { HEAL, getHealKey } from "@/lib/constants";
 import type { ThemeColors } from "@/lib/constants";
 
@@ -38,7 +39,7 @@ export function HealingTimeline({ habit, cleanDays, th }: HealingTimelineProps) 
               }} />
               <div style={{ fontSize: 12, fontWeight: 600, color: reached ? th.text : th.textSub }}>
                 {step.t}
-                {reached && <span style={{ marginLeft: 6, fontSize: 9, color: habit.color, fontWeight: 700 }}>✓</span>}
+                {reached && <Check size={9} color={habit.color} style={{ marginLeft: 6, verticalAlign: "middle" }} />}
                 {isNext && daysUntil > 0 && (
                   <span style={{ marginLeft: 6, fontSize: 9, color: th.textMuted, fontWeight: 500 }}>
                     {daysUntil === 1 ? "tomorrow" : `in ${daysUntil}d`}

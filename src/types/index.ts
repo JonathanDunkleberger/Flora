@@ -67,3 +67,13 @@ export interface AppData {
   coins: number;
   earned: EarnedMilestones;
 }
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: ShopCategory;
+}
+
+export type ShopCategory = "landscape" | "trees" | "flowers" | "decorations";

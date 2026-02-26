@@ -37,8 +37,8 @@ export default async function SettingsPage() {
         </div>
         {!isPro && (
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(0,0,0,0.04)", fontSize: 11, color: "rgba(0,0,0,0.3)" }}>
-            <p>🥚 Free: 5 habits, all features</p>
-            <p style={{ color: "#6366f1", marginTop: 3 }}>✨ Pro: Unlimited habits, exclusive creatures</p>
+            <p>Free: 5 habits, all features</p>
+            <p style={{ color: "#6366f1", marginTop: 3 }}>Pro: Unlimited habits, exclusive creatures</p>
           </div>
         )}
       </div>

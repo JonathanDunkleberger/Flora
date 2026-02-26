@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, RefreshCw } from "lucide-react";
+import { ArrowRight, RefreshCw, CloudMoon, Clock, Moon } from "lucide-react";
 import { WELCOME_MSGS } from "@/lib/constants";
 import type { ThemeColors } from "@/lib/constants";
 
@@ -21,7 +21,9 @@ export function WelcomeBack({ daysAway, onClose, th }: WelcomeBackProps) {
         background: th.card, borderRadius: 22, padding: "28px 24px", maxWidth: 340, width: "100%", textAlign: "center",
         animation: "su .35s cubic-bezier(.16,1,.3,1)", border: `1px solid ${th.cardBorder}`,
       }}>
-        <div style={{ fontSize: 32, marginBottom: 8 }}>{daysAway <= 2 ? "😴" : daysAway <= 7 ? "🥱" : "💤"}</div>
+        <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}>
+          {daysAway <= 2 ? <CloudMoon size={32} color={th.textSub} /> : daysAway <= 7 ? <Clock size={32} color={th.textSub} /> : <Moon size={32} color={th.textSub} />}
+        </div>
         <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 20, fontWeight: 500, color: th.text, marginBottom: 6 }}>{msg.title}</h2>
         <p style={{ fontSize: 13, color: th.textSub, lineHeight: 1.6, marginBottom: 4 }}>{msg.body}</p>
         <p style={{ fontSize: 11, color: th.textMuted, marginBottom: 18 }}>

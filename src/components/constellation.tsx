@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Check, Sparkles } from "lucide-react";
+import { Check, Sparkles, Orbit, Waves, Rocket } from "lucide-react";
 import { seed, daysAgo } from "@/lib/utils";
 import { getSynergyName } from "@/lib/constants";
 import type { ThemeColors } from "@/lib/constants";
@@ -149,13 +149,13 @@ export function Constellation({ habits, isDone, getStreak, getTotal, th }: Const
         <div className="lb" style={{ marginBottom: 8 }}>Constellation Unlocks</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {[
-            { n: 1, reward: "Faint orbital ring", icon: "🪐" },
-            { n: 3, reward: "Planet rainbow shimmer", icon: "🌈" },
-            { n: 5, reward: "Northern lights", icon: "🌌" },
-            { n: 8, reward: "Comet visitors", icon: "☄️" },
+            { n: 1, reward: "Faint orbital ring", Icon: Orbit },
+            { n: 3, reward: "Planet rainbow shimmer", Icon: Sparkles },
+            { n: 5, reward: "Northern lights", Icon: Waves },
+            { n: 8, reward: "Comet visitors", Icon: Rocket },
           ].map((u, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, opacity: synergies.length >= u.n ? 1 : 0.35 }}>
-              <span style={{ fontSize: 16 }}>{u.icon}</span>
+              <u.Icon size={16} color={synergies.length >= u.n ? "#8B5CF6" : th.textMuted} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: synergies.length >= u.n ? "#8B5CF6" : th.textMuted }}>{u.n} synergies</div>
                 <div style={{ fontSize: 10, color: th.textSub }}>{u.reward}</div>
