@@ -4,6 +4,7 @@ import { Sparkles } from "lucide-react";
 import { seed } from "@/lib/utils";
 import { SEASONS } from "@/lib/constants";
 import { PlanetItem } from "@/components/planet-items";
+import { getCreatureColor, getCreatureSprite, CREATURE_SIZES } from "@/lib/sprites";
 import type { HabitWithStats } from "@/types";
 import type { SeasonKey } from "@/lib/constants";
 
@@ -250,80 +251,44 @@ export function TerrariumScene({
           const py = cy + Math.sin(angleRad) * (pr + 2);
           const rotDeg = angleDeg + 90;
 
-          const mx = habits.length > 6 ? 36 : habits.length > 4 ? 42 : habits.length > 3 ? 50 : 58;
-          const stageSizes = [26, 26, 30, 34, 40];
-          const sz = habits.length >= 8 ? Math.max(20, stageSizes[st] * 0.7) : Math.min(stageSizes[st], mx);
-          const scale = sz / 52;
-
-          // Stage 0 = egg
-          if (st === 0) {
-            const eggW = habits.length >= 8 ? 16 : 22;
-            const eggH = habits.length >= 8 ? 20 : 28;
-            const eggScale = eggH / 52;
-            return (
-              <g key={h.id} transform={`translate(${px}, ${py}) rotate(${rotDeg})`}>
-                {/* Glow circle */}
-                <circle cx="0" cy={-eggH / 2} r={eggH * 0.75} fill={h.color} opacity="0.1" />
-                <g style={{
-                  animation: `pulse 2.5s ease-in-out infinite`,
-                  animationDelay: `${r() * 2}s`,
-                }}>
-                  <g transform={`translate(0, ${-eggH / 2 - 2}) scale(${eggScale})`}>
-                    {/* Egg body */}
-                    <ellipse cx="0" cy="0" rx="7" ry="9" fill={h.color} />
-                    <ellipse cx="0" cy="-2" rx="5" ry="5.5" fill="white" opacity="0.15" />
-                    {/* Egg shine */}
-                    <ellipse cx="-2" cy="-3" rx="1.5" ry="2.5" fill="white" opacity="0.25" transform="rotate(-15)" />
-                    {/* Subtle crack lines for anticipation */}
-                    <path d="M-1.5 3 L0 1 L1.5 3.5" stroke={h.color} strokeWidth="0.6" fill="none" opacity="0.3" filter="url(#lp-soft)" />
-                  </g>
-                  {/* Name label — horizontal (counter-rotate) */}
-                  <text y={eggH / 2 + 8} textAnchor="middle" fontSize="8.5" fill="rgba(255,255,255,0.7)" fontWeight="600"
-                    transform={`rotate(${-rotDeg})`}
-                    style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>{h.name}</text>
-                </g>
-              </g>
-            );
-          }
+          // Sprite size based on stage, scaled down if many habits
+          const baseSz = CREATURE_SIZES[st] || 48;
+          const sz = habits.length >= 8 ? Math.max(24, baseSz * 0.6)
+                   : habits.length >= 5 ? Math.max(28, baseSz * 0.75)
+                   : baseSz;
+          const creatureColor = getCreatureColor(h.color);
+          const spritePath = getCreatureSprite(st, creatureColor);
 
           return (
             <g key={h.id} transform={`translate(${px}, ${py}) rotate(${rotDeg})`}>
               {/* Glow circle underneath */}
-              <circle cx="0" cy={-sz / 2} r={sz * 0.75} fill={h.color} opacity="0.1" />
+              <circle cx="0" cy={-sz / 2} r={sz * 0.6} fill={h.color} opacity="0.12" />
               <g style={{
                 animation: isBouncing ? "none" : `bob ${2.2 + r() * 1.5}s ease-in-out infinite`,
                 animationDelay: `${r() * 2}s`,
               }}>
-                <g transform={`translate(0, ${-sz / 2 - 2}) scale(${scale})`}>
-                  {/* Inline mini creature */}
-                  <ellipse cx="0" cy="0" rx={6 + st * 2.5} ry={5 + st * 2} fill={h.color} />
-                  <ellipse cx="0" cy="-1" rx={(6 + st * 2.5) * 0.85} ry={(5 + st * 2) * 0.7} fill={h.color + "88"} opacity="0.3" />
-                  {/* Eyes */}
-                  <circle cx={-(3 + st * 0.5)} cy={-(1 + st * 0.2)} r={1.8 + st * 0.2} fill="#1a1a2e" />
-                  <circle cx={3 + st * 0.5} cy={-(1 + st * 0.2)} r={1.8 + st * 0.2} fill="#1a1a2e" />
-                  <circle cx={-(2.5 + st * 0.4)} cy={-(2 + st * 0.3)} r={0.7} fill="white" />
-                  <circle cx={3.5 + st * 0.4} cy={-(2 + st * 0.3)} r={0.7} fill="white" />
-                  {/* Blush — visible when happy, hidden when neutral */}
-                  <ellipse cx={-(5 + st * 0.5)} cy={1} rx="2" ry="1.2" fill={h.color + "88"} opacity={hp ? 0.4 : 0} />
-                  <ellipse cx={5 + st * 0.5} cy={1} rx="2" ry="1.2" fill={h.color + "88"} opacity={hp ? 0.4 : 0} />
-                  {/* Mouth */}
-                  {hp
-                    ? <path d={`M-2 ${2 + st * 0.2} Q0 ${5 + st * 0.3} 2 ${2 + st * 0.2}`} stroke="#1a1a2e" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-                    : <ellipse cx="0" cy={3 + st * 0.1} rx="1.2" ry="0.8" fill="#1a1a2e" />}
-                  {/* Happy sparkles — only when happy */}
-                  {hp && (
-                    <>
-                      <circle cx={-(8 + st)} cy={-(5 + st)} r="1" fill="#FFD700" opacity="0.5">
-                        <animate attributeName="opacity" values="0.3;0.8;0.3" dur="1.8s" repeatCount="indefinite" />
-                      </circle>
-                      <circle cx={8 + st} cy={-(6 + st)} r="0.8" fill="#FFD700" opacity="0.4">
-                        <animate attributeName="opacity" values="0.4;0.9;0.4" dur="2s" repeatCount="indefinite" />
-                      </circle>
-                    </>
-                  )}
-                  {/* Crown for evolved */}
-                  {st >= 4 && <path d="M-5,-8 L-3,-14 L0,-10 L3,-14 L5,-8Z" fill="#FFD700" opacity="0.7" />}
-                </g>
+                {/* Sprite image via foreignObject */}
+                <foreignObject
+                  x={-sz / 2} y={-sz - 2}
+                  width={sz} height={sz}
+                  transform={`rotate(${-rotDeg})`}
+                  style={{ overflow: "visible" }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={spritePath}
+                    alt={h.name}
+                    width={sz}
+                    height={sz}
+                    style={{
+                      imageRendering: "pixelated",
+                      display: "block",
+                      filter: hp ? "none" : "saturate(0.5) brightness(0.85)",
+                      transition: "filter 0.3s",
+                    }}
+                    draggable={false}
+                  />
+                </foreignObject>
                 {/* Name label — horizontal (counter-rotate) */}
                 <text y={sz / 2 + 8} textAnchor="middle" fontSize="8.5" fill="rgba(255,255,255,0.7)" fontWeight="600"
                   transform={`rotate(${-rotDeg})`}
