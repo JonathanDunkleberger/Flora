@@ -4,6 +4,7 @@ import {
   Brain, Dumbbell, BookOpen, Droplets, Moon, Footprints, Utensils,
   Palette, Target, Smartphone, Wine, Cigarette, Coffee, Eye, Clock,
   Heart, Zap, Star, Flame, TrendingUp, Trophy, Sparkles,
+  Download, RefreshCw, Share2, Award, Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -15,6 +16,7 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   Brain, Dumbbell, BookOpen, Droplets, Moon, Footprints, Utensils,
   Palette, Target, Smartphone, Wine, Cigarette, Coffee, Eye, Clock,
   Heart, Zap, Star, Flame, TrendingUp, Trophy, Sparkles,
+  Download, RefreshCw, Share2, Award, Users,
 };
 
 export function getIcon(name: string): LucideIcon {

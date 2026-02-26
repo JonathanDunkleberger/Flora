@@ -140,3 +140,28 @@ export const THEME: Record<"light" | "dark", ThemeColors> = {
     glassHighlight: "rgba(255,255,255,0.06)",
   },
 };
+
+/* ═══════════ FAIL RECOVERY & WELCOME BACK ═══════════ */
+export const WELCOME_MSGS = [
+  { title: "Welcome back! 🌱", body: "Your creatures missed you. They've been napping — let's wake them up together.", vibe: "warm" },
+  { title: "Hey, you came back! 💚", body: "That's the hard part done. One check-in and your planet starts glowing again.", vibe: "proud" },
+  { title: "Fresh start energy ✨", body: "Streaks break. What matters is you're here now. Your creatures are stretching and ready.", vibe: "fresh" },
+  { title: "Look who's back! 🪐", body: "Your planet kept spinning while you were away. Time to make it bloom again.", vibe: "playful" },
+] as const;
+
+export const BOUNCE_BACK = [
+  { d: 1, msg: "Day 1 again — you showed up 💪", c: 3 },
+  { d: 3, msg: "3 days strong! Bounce-back streak 🔥", c: 10 },
+  { d: 7, msg: "Full week recovery! Your creatures are thriving 🌟", c: 25 },
+] as const;
+
+export const SYNERGY_NAMES: Record<string, string> = {
+  "Meditate+Exercise": "Mind-Body", "Meditate+Read": "Deep Focus", "Meditate+Journal": "Inner Peace",
+  "Exercise+Hydrate": "Body Care", "Exercise+Walk": "Active Life", "Read+Journal": "Reflection",
+  "Journal+Meditate": "Mindfulness", "Sleep well+No screens before bed": "Rest Ritual",
+  "Deep work+Read": "Scholar", "Cook a meal+Hydrate": "Nourish",
+};
+
+export function getSynergyName(a: string, b: string): string | null {
+  return SYNERGY_NAMES[`${a}+${b}`] || SYNERGY_NAMES[`${b}+${a}`] || null;
+}

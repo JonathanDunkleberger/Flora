@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Check, Plus, X, Flame, ChevronLeft, ChevronRight, Coins, Sparkles,
   Pencil, Shield, Sun, Moon, LayoutGrid, Download, Snowflake, Flower, Leaf, SunDim,
+  Users, Share2, Calendar, RefreshCw,
 } from "lucide-react";
 import { Creature } from "@/components/creature";
 import { TerrariumScene } from "@/components/terrarium-scene";
@@ -12,11 +13,15 @@ import { Heatmap } from "@/components/heatmap";
 import { Confetti } from "@/components/confetti";
 import { UndoToast, CoinToast } from "@/components/toast";
 import { Gallery } from "@/components/gallery";
+import { WelcomeBack } from "@/components/welcome-back";
+import { Constellation } from "@/components/constellation";
+import { WeeklyCard } from "@/components/weekly-card";
+import { BloomTogether } from "@/components/bloom-together";
 import { getStage, getIcon, today, daysAgo } from "@/lib/utils";
 import {
   MILESTONES, STAGE_LABELS, STAGE_THRESHOLDS,
   PRESETS, PRESET_CATEGORIES, HABIT_COLORS,
-  SEASONS, getSeason, THEME,
+  SEASONS, getSeason, THEME, BOUNCE_BACK,
 } from "@/lib/constants";
 import type { HabitWithStats, EarnedMilestones } from "@/types";
 import type { LucideIcon } from "lucide-react";
@@ -39,7 +44,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   const [season, setSeason] = useState<SeasonKey>(getSeason());
   const th = THEME[darkMode ? "dark" : "light"];
   const sn = SEASONS[season];
-  const [page, setPage] = useState<"main" | "detail" | "add" | "gallery">("main");
+  const [page, setPage] = useState<"main" | "detail" | "add" | "gallery" | "constellation" | "social">("main");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [coinToast, setCoinToast] = useState<{ msg: string; icon: LucideIcon } | null>(null);
   const [undoToast, setUndoToast] = useState<{ msg: string; onUndo: () => void } | null>(null);
@@ -52,12 +57,41 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   const [cColor, setCColor] = useState("#6366f1");
   const [mounted, setMounted] = useState(false);
   const [prevAllDone, setPrevAllDone] = useState(false);
+  const [showWelcomeBack, setShowWelcomeBack] = useState(false);
+  const [daysAwayCnt, setDaysAwayCnt] = useState(0);
+  const [showWeekly, setShowWeekly] = useState(false);
+  const [bounceBackDay, setBounceBackDay] = useState(0);
+  const [bloomCode] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("bloom_code");
+      if (saved) return saved;
+      const code = `BLOOM-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      localStorage.setItem("bloom_code", code);
+      return code;
+    }
+    return "BLOOM-XXXX";
+  });
+  const [friends] = useState<{ name: string; streak: number; lastActive: string }[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const editRef = useRef<HTMLInputElement>(null);
   const terRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setTimeout(() => setMounted(true), 50);
+    // Welcome back detection
+    if (typeof window !== "undefined") {
+      const lastVisit = localStorage.getItem("bloom_last_visit");
+      const now = today();
+      if (lastVisit && lastVisit !== now) {
+        const diff = Math.round((new Date(now + "T12:00:00").getTime() - new Date(lastVisit + "T12:00:00").getTime()) / 86400000);
+        if (diff >= 2) {
+          setDaysAwayCnt(diff);
+          setShowWelcomeBack(true);
+          setBounceBackDay(1);
+        }
+      }
+      localStorage.setItem("bloom_last_visit", now);
+    }
   }, []);
 
   const todayStr = today();
@@ -222,6 +256,20 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
       if (!wasComplete && data.action === "logged") {
         const streak = getStreak(hId) + 1;
         setTimeout(() => checkMilestones(hId, streak), 100);
+        // Bounce-back recovery coins
+        if (bounceBackDay > 0) {
+          const milestone = BOUNCE_BACK.find((b) => b.d === bounceBackDay);
+          if (milestone) {
+            setCoins((p) => p + milestone.c);
+            setCoinToast({ msg: `Bounce back! +${milestone.c}`, icon: RefreshCw });
+            fetch("/api/coins", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ coins: coins + milestone.c, earned }),
+            }).catch(() => {});
+          }
+          setBounceBackDay((d) => d + 1);
+        }
       }
     } catch {
       router.refresh();
@@ -397,6 +445,39 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                   <LayoutGrid size={14} />
                 </button>
                 <button
+                  onClick={() => setPage("constellation")}
+                  title="Constellation"
+                  style={{
+                    background: th.progressBg, border: "none", borderRadius: 8,
+                    padding: 5, cursor: "pointer", display: "flex", color: "#8B5CF6",
+                    transition: "all .15s",
+                  }}
+                >
+                  <Sparkles size={14} />
+                </button>
+                <button
+                  onClick={() => setPage("social")}
+                  title="Bloom Together"
+                  style={{
+                    background: th.progressBg, border: "none", borderRadius: 8,
+                    padding: 5, cursor: "pointer", display: "flex", color: "#4caf50",
+                    transition: "all .15s",
+                  }}
+                >
+                  <Users size={14} />
+                </button>
+                <button
+                  onClick={() => setShowWeekly(true)}
+                  title="Weekly Summary"
+                  style={{
+                    background: th.progressBg, border: "none", borderRadius: 8,
+                    padding: 5, cursor: "pointer", display: "flex", color: th.textSub,
+                    transition: "all .15s",
+                  }}
+                >
+                  <Calendar size={14} />
+                </button>
+                <button
                   onClick={() => {
                     const ss: SeasonKey[] = ["spring", "summer", "autumn", "winter"];
                     setSeason(ss[(ss.indexOf(season) + 1) % 4]);
@@ -476,6 +557,46 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 </div>
               </div>
             )}
+
+            {/* Bounce-back recovery banner */}
+            {bounceBackDay > 0 && bounceBackDay <= 3 && (
+              <div style={{
+                margin: "8px 2px 0", padding: "10px 14px", borderRadius: 12,
+                background: "linear-gradient(135deg,rgba(76,175,80,0.08),rgba(102,255,170,0.05))",
+                border: "1px solid rgba(76,175,80,0.15)", display: "flex", alignItems: "center", gap: 10,
+              }}>
+                <RefreshCw size={16} color="#4caf50" />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: th.text }}>Bounce-back day {bounceBackDay}/3</div>
+                  <div style={{ fontSize: 10, color: th.textSub }}>
+                    Complete habits to earn recovery coins!
+                  </div>
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#4caf50" }}>
+                  +{BOUNCE_BACK.find((b) => b.d === bounceBackDay)?.c ?? 0}
+                </div>
+              </div>
+            )}
+
+            {/* Gentle time-of-day nudge */}
+            {totalToday === 0 && habits.length > 0 && (() => {
+              const hr = new Date().getHours();
+              const nudge = hr < 12
+                ? { emoji: "🌅", msg: "Good morning! A small step forward today?" }
+                : hr < 17
+                  ? { emoji: "☀️", msg: "Afternoon check-in — any habits to bloom?" }
+                  : { emoji: "🌙", msg: "Evening wind-down — still time to grow today" };
+              return (
+                <div style={{
+                  margin: "8px 2px 0", padding: "10px 14px", borderRadius: 12,
+                  background: th.card, border: `1px solid ${th.cardBorder}`,
+                  display: "flex", alignItems: "center", gap: 10,
+                }}>
+                  <span style={{ fontSize: 18 }}>{nudge.emoji}</span>
+                  <span style={{ fontSize: 12, color: th.textSub, fontWeight: 500 }}>{nudge.msg}</span>
+                </div>
+              );
+            })()}
 
             {/* Today's habits */}
             <div className="cd" style={{
@@ -748,6 +869,33 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
         {page === "gallery" && (
           <Gallery habits={habits} getStage={getStageForId} getTotal={getTotal} isHappy={isHappy} th={th} />
         )}
+
+        {/* ═══ CONSTELLATION ═══ */}
+        {page === "constellation" && (
+          <div style={{ animation: "fadeUp 0.28s ease" }}>
+            <Constellation habits={habits} isDone={isComplete} getStreak={getStreak} getTotal={getTotal} th={th} />
+          </div>
+        )}
+
+        {/* ═══ SOCIAL ═══ */}
+        {page === "social" && (
+          <div style={{ animation: "fadeUp 0.28s ease" }}>
+            <BloomTogether
+              habits={habits} getStage={getStageForId} isHappy={isHappy}
+              getStreak={getStreak} getTotal={getTotal}
+              bloomCode={bloomCode} friends={friends}
+              onInvite={() => {
+                if (navigator.share) {
+                  navigator.share({ title: "Bloom Together", text: `Join me on bloom! My planet code: ${bloomCode}` }).catch(() => {});
+                } else {
+                  navigator.clipboard.writeText(bloomCode);
+                  setCoinToast({ msg: "Code copied!", icon: Share2 });
+                }
+              }}
+              th={th}
+            />
+          </div>
+        )}
       </div>
 
       {/* FAB */}
@@ -826,6 +974,20 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
             </div>
           </div>
         </div>
+      )}
+
+      {/* Welcome Back modal */}
+      {showWelcomeBack && (
+        <WelcomeBack daysAway={daysAwayCnt} onClose={() => setShowWelcomeBack(false)} th={th} />
+      )}
+
+      {/* Weekly Summary modal */}
+      {showWeekly && (
+        <WeeklyCard
+          habits={habits} isDone={isComplete} getStreak={getStreak}
+          getTotal={getTotal} getStage={getStageForId} todayPct={todayPct}
+          coins={coins} season={season} th={th} onClose={() => setShowWeekly(false)}
+        />
       )}
     </div>
   );
