@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check, Plus, X, Flame, ChevronLeft, ChevronRight, Coins, Sparkles,
   Pencil, Shield, Sun, Moon, LayoutGrid, Download, Snowflake, Flower, Leaf, SunDim,
-  Users, Share2, Calendar, RefreshCw,
+  Users, Share2, Calendar, RefreshCw, Wind, DollarSign,
 } from "lucide-react";
 import { Creature } from "@/components/creature";
 import { TerrariumScene } from "@/components/terrarium-scene";
@@ -17,13 +17,19 @@ import { WelcomeBack } from "@/components/welcome-back";
 import { Constellation } from "@/components/constellation";
 import { WeeklyCard } from "@/components/weekly-card";
 import { BloomTogether } from "@/components/bloom-together";
-import { getStage, getIcon, today, daysAgo } from "@/lib/utils";
+import { BreathingTimer } from "@/components/breathing-timer";
+import { HealingTimeline } from "@/components/healing-timeline";
+import { UrgeTrend } from "@/components/urge-trend";
+import { RelapseModal } from "@/components/relapse-modal";
+import { ReasonEditor } from "@/components/reason-editor";
+import { getStage, getIcon, today, daysAgo, daysBetween, fmtDuration, fmtMoney } from "@/lib/utils";
 import {
   MILESTONES, STAGE_LABELS, STAGE_THRESHOLDS,
   PRESETS, PRESET_CATEGORIES, HABIT_COLORS,
   SEASONS, getSeason, THEME, BOUNCE_BACK,
+  QUIT_PRESETS,
 } from "@/lib/constants";
-import type { HabitWithStats, EarnedMilestones } from "@/types";
+import type { HabitWithStats, EarnedMilestones, QuitData } from "@/types";
 import type { LucideIcon } from "lucide-react";
 import type { SeasonKey } from "@/lib/constants";
 
@@ -72,6 +78,9 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
     return "BLOOM-XXXX";
   });
   const [friends] = useState<{ name: string; streak: number; lastActive: string }[]>([]);
+  const [quitDataMap, setQuitDataMap] = useState<Record<string, QuitData>>({});
+  const [breathingHabit, setBreathingHabit] = useState<HabitWithStats | null>(null);
+  const [relapseHabit, setRelapseHabit] = useState<HabitWithStats | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const editRef = useRef<HTMLInputElement>(null);
   const terRef = useRef<HTMLDivElement>(null);
@@ -91,8 +100,21 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
         }
       }
       localStorage.setItem("bloom_last_visit", now);
+
+      // Load quit data
+      try {
+        const raw = localStorage.getItem("bloom_quit_data");
+        if (raw) setQuitDataMap(JSON.parse(raw));
+      } catch { /* ignore */ }
     }
   }, []);
+
+  // Persist quit data
+  useEffect(() => {
+    if (typeof window !== "undefined" && Object.keys(quitDataMap).length > 0) {
+      localStorage.setItem("bloom_quit_data", JSON.stringify(quitDataMap));
+    }
+  }, [quitDataMap]);
 
   const todayStr = today();
 
@@ -103,6 +125,69 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
       completions[`${h.id}:${l.log_date}`] = true;
     });
   });
+
+  // ── Quit-habit helpers ──────────────────────────────
+  const isQuit = useCallback((h: HabitWithStats) => h.category === "quit", []);
+
+  const getQuitData = useCallback(
+    (hId: string): QuitData | undefined => quitDataMap[hId],
+    [quitDataMap]
+  );
+
+  const getCleanDays = useCallback(
+    (hId: string): number => {
+      const qd = quitDataMap[hId];
+      if (!qd?.quitDate) return 0;
+      return daysBetween(qd.quitDate, todayStr);
+    },
+    [quitDataMap, todayStr]
+  );
+
+  const updateQuitData = useCallback(
+    (hId: string, patch: Partial<QuitData>) => {
+      setQuitDataMap((prev) => ({
+        ...prev,
+        [hId]: { ...prev[hId], ...patch } as QuitData,
+      }));
+    },
+    []
+  );
+
+  const logUrge = useCallback(
+    (hId: string) => {
+      setQuitDataMap((prev) => {
+        const cur = prev[hId];
+        if (!cur) return prev;
+        const urges = [...(cur.urges || []), todayStr];
+        return { ...prev, [hId]: { ...cur, urges } };
+      });
+    },
+    [todayStr]
+  );
+
+  const resetQuit = useCallback(
+    (hId: string) => {
+      updateQuitData(hId, { quitDate: todayStr });
+    },
+    [updateQuitData, todayStr]
+  );
+
+  const updateReason = useCallback(
+    (hId: string, text: string) => {
+      updateQuitData(hId, { reason: text });
+    },
+    [updateQuitData]
+  );
+
+  const totalSaved = useMemo(() => {
+    return habits
+      .filter((h) => h.category === "quit")
+      .reduce((sum, h) => {
+        const qd = quitDataMap[h.id];
+        if (!qd?.quitDate) return sum;
+        return sum + (qd.dailyCost || 0) * daysBetween(qd.quitDate, todayStr);
+      }, 0);
+  }, [habits, quitDataMap, todayStr]);
 
   const isComplete = useCallback(
     (hId: string, date: string) => !!completions[`${hId}:${date}`],
@@ -151,9 +236,11 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
     [isComplete, todayStr]
   );
 
-  const totalToday = habits.filter((h) => isHappy(h.id)).length;
-  const todayPct = habits.length ? totalToday / habits.length : 0;
-  const allDone = todayPct >= 1 && habits.length > 0;
+  const buildHabits = habits.filter((h) => h.category !== "quit");
+  const quitHabits = habits.filter((h) => h.category === "quit");
+  const totalToday = buildHabits.filter((h) => isHappy(h.id)).length;
+  const todayPct = buildHabits.length ? totalToday / buildHabits.length : 0;
+  const allDone = todayPct >= 1 && buildHabits.length > 0;
 
   // Confetti trigger
   useEffect(() => {
@@ -262,14 +349,14 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
     }
   };
 
-  const addHabit = async (name: string, color: string, iconName: string) => {
+  const addHabit = async (name: string, color: string, iconName: string, cat: string = "general", dailyCost: number = 0) => {
     setPage("main");
     setCName("");
     try {
       const res = await fetch("/api/habits", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, color, icon_name: iconName, category: "general" }),
+        body: JSON.stringify({ name, color, icon_name: iconName, category: cat }),
       });
       if (res.ok) {
         const newHabit = await res.json();
@@ -277,6 +364,10 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
           ...prev,
           { ...newHabit, currentStreak: 0, totalDays: 0, completedToday: false, stage: 0, logs: [] },
         ]);
+        // Initialise quit data for quit habits
+        if (cat === "quit") {
+          updateQuitData(newHabit.id, { quitDate: todayStr, dailyCost, reason: "", urges: [] });
+        }
       }
     } catch {
       router.refresh();
@@ -412,6 +503,27 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
       {coinToast && <CoinToast {...coinToast} onDone={() => setCoinToast(null)} />}
       {undoToast && <UndoToast {...undoToast} onDone={() => setUndoToast(null)} />}
 
+      {/* Breathing timer overlay */}
+      {breathingHabit && (
+        <BreathingTimer
+          habit={breathingHabit}
+          onComplete={() => { setBreathingHabit(null); setCoinToast({ msg: "Urge surfed! 🌊", icon: Wind }); }}
+          onClose={() => setBreathingHabit(null)}
+          th={th}
+        />
+      )}
+
+      {/* Relapse modal */}
+      {relapseHabit && (
+        <RelapseModal
+          habit={relapseHabit}
+          cleanDays={getCleanDays(relapseHabit.id)}
+          onConfirm={() => { resetQuit(relapseHabit.id); setRelapseHabit(null); setCoinToast({ msg: "Counter reset. You've got this 💚", icon: RefreshCw }); }}
+          onClose={() => setRelapseHabit(null)}
+          th={th}
+        />
+      )}
+
       <div style={{ maxWidth: 520, margin: "0 auto", padding: "0 14px 90px" }}>
         {/* HEADER */}
         <div style={{ ...fs, padding: "14px 2px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -525,6 +637,16 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
             }}>
               <Coins size={11} />{coins}
             </div>
+            {totalSaved > 0 && (
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: 3,
+                padding: "3px 10px", borderRadius: 100,
+                background: "rgba(76,175,80,0.08)", color: "#4caf50",
+                fontSize: 11, fontWeight: 700,
+              }}>
+                <DollarSign size={11} />{fmtMoney(totalSaved)} saved
+              </div>
+            )}
           </div>
         </div>
 
@@ -644,25 +766,43 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 </div>
               ) : (
                 habits.map((h) => {
-                  const done = isHappy(h.id);
-                  const streak = getStreak(h.id);
-                  const hasFz = (streakFreezes[h.id] || 0) > 0;
+                  const quit = isQuit(h);
+                  const done = !quit && isHappy(h.id);
+                  const streak = quit ? 0 : getStreak(h.id);
+                  const hasFz = !quit && (streakFreezes[h.id] || 0) > 0;
                   const Icon = getIcon(h.icon_name);
+                  const cleanDays = quit ? getCleanDays(h.id) : 0;
+                  const qd = quit ? getQuitData(h.id) : undefined;
+                  const moneySaved = quit && qd ? (qd.dailyCost || 0) * cleanDays : 0;
                   return (
                     <div key={h.id} className="rw" style={{
                       animation: "fadeUp 0.3s ease",
                       background: "transparent",
                     }}>
-                      <div
-                        className={`ck ${done ? "d" : ""}`}
-                        style={{
-                          background: done ? h.color : "transparent",
-                          borderColor: done ? "transparent" : th.checkBorder,
-                        }}
-                        onClick={(e) => { e.stopPropagation(); toggleCompletion(h.id); }}
-                      >
-                        <Check size={14} color="white" strokeWidth={3} />
-                      </div>
+                      {quit ? (
+                        /* Quit habit: shield icon instead of checkbox */
+                        <div
+                          style={{
+                            width: 26, height: 26, borderRadius: 8,
+                            background: `${h.color}18`,
+                            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                          }}
+                          onClick={() => { setDetailId(h.id); setPage("detail"); }}
+                        >
+                          <Shield size={14} color={h.color} />
+                        </div>
+                      ) : (
+                        <div
+                          className={`ck ${done ? "d" : ""}`}
+                          style={{
+                            background: done ? h.color : "transparent",
+                            borderColor: done ? "transparent" : th.checkBorder,
+                          }}
+                          onClick={(e) => { e.stopPropagation(); toggleCompletion(h.id); }}
+                        >
+                          <Check size={14} color="white" strokeWidth={3} />
+                        </div>
+                      )}
                       <div
                         style={{
                           width: 24, height: 24, borderRadius: 7,
@@ -673,31 +813,56 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                       >
                         <Icon size={13} color={h.color} />
                       </div>
-                      <span
-                        style={{
-                          flex: 1, fontSize: 14, fontWeight: 500,
-                          textDecoration: done ? "line-through" : "none",
-                          color: done ? th.textMuted : th.text,
-                          transition: "all 0.2s",
-                        }}
+                      <div
+                        style={{ flex: 1, cursor: "pointer" }}
                         onClick={() => { setDetailId(h.id); setPage("detail"); }}
                       >
-                        {h.name}
-                      </span>
+                        <span
+                          style={{
+                            fontSize: 14, fontWeight: 500,
+                            textDecoration: !quit && done ? "line-through" : "none",
+                            color: !quit && done ? th.textMuted : th.text,
+                            transition: "all 0.2s",
+                          }}
+                        >
+                          {h.name}
+                        </span>
+                        {quit && cleanDays > 0 && (
+                          <div style={{ fontSize: 10, color: th.textSub, fontWeight: 500, marginTop: 1 }}>
+                            {fmtDuration(cleanDays)} clean{moneySaved > 0 && <span style={{ color: "#4caf50", marginLeft: 4 }}>• {fmtMoney(moneySaved)} saved</span>}
+                          </div>
+                        )}
+                      </div>
                       <div
                         style={{ display: "flex", alignItems: "center", gap: 5 }}
                         onClick={() => { setDetailId(h.id); setPage("detail"); }}
                       >
-                        {hasFz && <Shield size={10} color="#42b4d6" style={{ opacity: 0.5 }} />}
-                        {streak > 0 && (
-                          <span style={{
-                            fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 100,
-                            background: streak >= 7 ? th.streakActiveBg : th.streakBg,
-                            color: streak >= 7 ? "#d97706" : th.textMuted,
-                            display: "inline-flex", alignItems: "center", gap: 2,
-                          }}>
-                            <Flame size={9} />{streak}d
-                          </span>
+                        {quit ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); logUrge(h.id); setCoinToast({ msg: "Urge resisted 💪", icon: Wind }); }}
+                            style={{
+                              fontSize: 9, fontWeight: 700, padding: "3px 9px", borderRadius: 100,
+                              background: `${h.color}12`, color: h.color,
+                              border: "none", cursor: "pointer", fontFamily: "inherit",
+                              display: "inline-flex", alignItems: "center", gap: 3,
+                            }}
+                          >
+                            <Wind size={9} /> Urge
+                          </button>
+                        ) : (
+                          <>
+                            {hasFz && <Shield size={10} color="#42b4d6" style={{ opacity: 0.5 }} />}
+                            {streak > 0 && (
+                              <span style={{
+                                fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 100,
+                                background: streak >= 7 ? th.streakActiveBg : th.streakBg,
+                                color: streak >= 7 ? "#d97706" : th.textMuted,
+                                display: "inline-flex", alignItems: "center", gap: 2,
+                              }}>
+                                <Flame size={9} />{streak}d
+                              </span>
+                            )}
+                          </>
                         )}
                         <ChevronRight size={14} color={th.textFaint} />
                       </div>
@@ -784,7 +949,12 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
         )}
 
         {/* ═══ DETAIL ═══ */}
-        {page === "detail" && detailHabit && (
+        {page === "detail" && detailHabit && (() => {
+          const dq = isQuit(detailHabit);
+          const cleanD = dq ? getCleanDays(detailHabit.id) : 0;
+          const dqd = dq ? getQuitData(detailHabit.id) : undefined;
+          const urges = dqd?.urges || [];
+          return (
           <div style={{ animation: "fadeUp 0.28s ease" }}>
             <div
               className="cd"
@@ -794,7 +964,18 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 borderColor: th.cardBorder, boxShadow: th.cardShadow,
               }}
             >
-              <Creature stage={getStageForId(detailHabit.id)} color={detailHabit.color} happy={isHappy(detailHabit.id)} size={88} />
+              {dq ? (
+                /* ── Quit habit hero: big clean counter ── */
+                <>
+                  <Creature stage={Math.min(4, Math.floor(cleanD / 7))} color={detailHabit.color} happy={cleanD > 0} size={88} />
+                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: 42, fontWeight: 700, color: detailHabit.color, marginTop: 8 }}>
+                    {fmtDuration(cleanD)}
+                  </div>
+                  <div style={{ fontSize: 12, color: th.textSub, fontWeight: 500 }}>clean</div>
+                </>
+              ) : (
+                <Creature stage={getStageForId(detailHabit.id)} color={detailHabit.color} happy={isHappy(detailHabit.id)} size={88} />
+              )}
 
               {editMode ? (
                 <div style={{ marginTop: 8, maxWidth: 260, margin: "8px auto 0" }}>
@@ -829,13 +1010,13 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                     </button>
                   </div>
                   <p style={{ fontSize: 10, color: th.textSub, marginTop: 2 }}>
-                    {STAGE_LABELS[getStageForId(detailHabit.id)]} creature
+                    {dq ? "Quit journey" : `${STAGE_LABELS[getStageForId(detailHabit.id)]} creature`}
                   </p>
                 </>
               )}
 
-              {/* Evolution progress */}
-              {!editMode && getStageForId(detailHabit.id) < 4 &&
+              {/* Evolution progress – build habits only */}
+              {!editMode && !dq && getStageForId(detailHabit.id) < 4 &&
                 (() => {
                   const st = getStageForId(detailHabit.id);
                   const tot = getTotal(detailHabit.id);
@@ -861,21 +1042,105 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
               {/* Stats */}
               {!editMode && (
                 <div style={{ display: "flex", gap: 24, justifyContent: "center", marginTop: 18 }}>
-                  {[
-                    { l: "Streak", v: `${getStreak(detailHabit.id)}d` },
-                    { l: "Total", v: getTotal(detailHabit.id) },
-                    { l: "Stage", v: STAGE_LABELS[getStageForId(detailHabit.id)] },
-                  ].map((s, i) => (
-                    <div key={i}>
-                      <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "'Fraunces',serif", color: th.text }}>{s.v}</div>
-                      <div className="lb" style={{ marginTop: 2, color: th.label }}>{s.l}</div>
-                    </div>
-                  ))}
+                  {dq ? (
+                    [
+                      { l: "Clean", v: cleanD > 0 ? `${cleanD}d` : "—" },
+                      { l: "Urges beaten", v: urges.length },
+                      { l: "Saved", v: dqd ? fmtMoney((dqd.dailyCost || 0) * cleanD) : "$0" },
+                    ].map((s, i) => (
+                      <div key={i}>
+                        <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "'Fraunces',serif", color: th.text }}>{s.v}</div>
+                        <div className="lb" style={{ marginTop: 2, color: th.label }}>{s.l}</div>
+                      </div>
+                    ))
+                  ) : (
+                    [
+                      { l: "Streak", v: `${getStreak(detailHabit.id)}d` },
+                      { l: "Total", v: getTotal(detailHabit.id) },
+                      { l: "Stage", v: STAGE_LABELS[getStageForId(detailHabit.id)] },
+                    ].map((s, i) => (
+                      <div key={i}>
+                        <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "'Fraunces',serif", color: th.text }}>{s.v}</div>
+                        <div className="lb" style={{ marginTop: 2, color: th.label }}>{s.l}</div>
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Streak freeze */}
+            {/* ── Quit-specific sections ── */}
+            {dq && (
+              <>
+                {/* Breathing + Reset buttons */}
+                <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                  <button
+                    onClick={() => setBreathingHabit(detailHabit)}
+                    className="cd"
+                    style={{
+                      flex: 1, padding: "14px 10px", textAlign: "center", cursor: "pointer",
+                      background: th.card, borderColor: th.cardBorder, boxShadow: th.cardShadow,
+                      fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    }}
+                  >
+                    <Wind size={16} color={detailHabit.color} />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: th.text }}>Breathe</div>
+                      <div style={{ fontSize: 10, color: th.textSub }}>Urge surfing</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setRelapseHabit(detailHabit)}
+                    className="cd"
+                    style={{
+                      flex: 1, padding: "14px 10px", textAlign: "center", cursor: "pointer",
+                      background: th.card, borderColor: th.cardBorder, boxShadow: th.cardShadow,
+                      fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                    }}
+                  >
+                    <RefreshCw size={16} color="#ef4444" />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: th.text }}>Reset</div>
+                      <div style={{ fontSize: 10, color: th.textSub }}>Start over</div>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Reason editor */}
+                <div className="cd" style={{
+                  padding: 14, marginBottom: 10,
+                  background: th.card, borderColor: th.cardBorder, boxShadow: th.cardShadow,
+                }}>
+                  <ReasonEditor
+                    value={dqd?.reason}
+                    onSave={(text) => updateReason(detailHabit.id, text)}
+                    color={detailHabit.color}
+                    th={th}
+                  />
+                </div>
+
+                {/* Healing timeline */}
+                <div className="cd" style={{
+                  padding: 14, marginBottom: 10,
+                  background: th.card, borderColor: th.cardBorder, boxShadow: th.cardShadow,
+                }}>
+                  <HealingTimeline habit={detailHabit} cleanDays={cleanD} th={th} />
+                </div>
+
+                {/* Urge trend */}
+                {urges.length > 0 && (
+                  <div className="cd" style={{
+                    padding: 14, marginBottom: 10,
+                    background: th.card, borderColor: th.cardBorder, boxShadow: th.cardShadow,
+                  }}>
+                    <UrgeTrend urgeLog={urges} color={detailHabit.color} th={th} />
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Streak freeze – build habits only */}
+            {!dq && (
             <div className="cd" style={{
               padding: 14, marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between",
               background: th.card, borderColor: th.cardBorder, boxShadow: th.cardShadow,
@@ -903,6 +1168,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 <Coins size={11} /> 50
               </button>
             </div>
+            )}
 
             {/* Activity heatmap */}
             <div className="cd" style={{
@@ -952,7 +1218,8 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
               Remove habit
             </button>
           </div>
-        )}
+          );
+        })()}
 
         {/* ═══ GALLERY ═══ */}
         {page === "gallery" && (
@@ -1009,6 +1276,33 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 <X size={18} />
               </button>
             </div>
+
+            {/* ── Quit presets ── */}
+            {(() => {
+              const quits = QUIT_PRESETS.filter((p) => !habits.find((h) => h.name === p.name));
+              if (!quits.length) return null;
+              return (
+                <div style={{ marginBottom: 12 }}>
+                  <div className="lb" style={{ marginBottom: 5, color: th.label, display: "flex", alignItems: "center", gap: 4 }}>
+                    <Shield size={10} /> Quit a habit
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                    {quits.map((p) => {
+                      const Ic = getIcon(p.iconName);
+                      return (
+                        <button key={p.name} className="pb" style={{
+                          background: th.card, borderColor: th.cardBorder, color: th.text,
+                        }} onClick={() => addHabit(p.name, p.color, p.iconName, "quit", p.cost)}>
+                          <Ic size={14} color={p.color} />{p.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ── Build presets ── */}
             {PRESET_CATEGORIES.map((gr) => {
               const its = PRESETS.filter(
                 (p) => p.cat === gr.cat && !habits.find((h) => h.name === p.name)

@@ -4,7 +4,8 @@ import {
   Brain, Dumbbell, BookOpen, Droplets, Moon, Footprints, Utensils,
   Palette, Target, Smartphone, Wine, Cigarette, Coffee, Eye, Clock,
   Heart, Zap, Star, Flame, TrendingUp, Trophy, Sparkles,
-  Download, RefreshCw, Share2, Award, Users,
+  Download, RefreshCw, Share2, Award, Users, Wind, DollarSign,
+  MessageCircle, AlertTriangle, Shield,
   type LucideIcon,
 } from "lucide-react";
 
@@ -16,7 +17,8 @@ export const ICON_MAP: Record<string, LucideIcon> = {
   Brain, Dumbbell, BookOpen, Droplets, Moon, Footprints, Utensils,
   Palette, Target, Smartphone, Wine, Cigarette, Coffee, Eye, Clock,
   Heart, Zap, Star, Flame, TrendingUp, Trophy, Sparkles,
-  Download, RefreshCw, Share2, Award, Users,
+  Download, RefreshCw, Share2, Award, Users, Wind, DollarSign,
+  MessageCircle, AlertTriangle, Shield,
 };
 
 export function getIcon(name: string): LucideIcon {
@@ -65,4 +67,28 @@ export function lightenColor(hex: string, amt: number): string {
   const g = Math.min(255, parseInt(match[2], 16) + amt);
   const b = Math.min(255, parseInt(match[3], 16) + amt);
   return `rgb(${r},${g},${b})`;
+}
+
+export function daysBetween(a: string, b: string): number {
+  const d1 = new Date(a + "T12:00:00");
+  const d2 = new Date(b + "T12:00:00");
+  return Math.max(0, Math.floor((d2.getTime() - d1.getTime()) / 86400000));
+}
+
+export function fmtDuration(days: number): string {
+  if (days === 0) return "Today";
+  if (days === 1) return "1 day";
+  if (days < 7) return `${days} days`;
+  if (days < 30) {
+    const w = Math.floor(days / 7);
+    const r = days % 7;
+    return r > 0 ? `${w}w ${r}d` : `${w} week${w > 1 ? "s" : ""}`;
+  }
+  const m = Math.floor(days / 30);
+  const r = days % 30;
+  return r > 0 ? `${m}mo ${r}d` : `${m} month${m > 1 ? "s" : ""}`;
+}
+
+export function fmtMoney(n: number): string {
+  return n >= 100 ? `$${Math.floor(n)}` : `$${n.toFixed(2)}`;
 }

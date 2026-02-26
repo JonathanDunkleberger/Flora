@@ -165,3 +165,76 @@ export const SYNERGY_NAMES: Record<string, string> = {
 export function getSynergyName(a: string, b: string): string | null {
   return SYNERGY_NAMES[`${a}+${b}`] || SYNERGY_NAMES[`${b}+${a}`] || null;
 }
+
+/* ═══════════ QUIT PRESETS ═══════════ */
+export const QUIT_PRESETS = [
+  { name: "No cannabis", iconName: "Cigarette", color: "#27ae60", cost: 15 },
+  { name: "No juul", iconName: "Wind", color: "#607d8b", cost: 8 },
+  { name: "No alcohol", iconName: "Wine", color: "#8e44ad", cost: 12 },
+  { name: "No porn", iconName: "Eye", color: "#e74c3c", cost: 0 },
+  { name: "No doom scrolling", iconName: "Smartphone", color: "#95a5a6", cost: 0 },
+  { name: "No junk food", iconName: "Utensils", color: "#f39c12", cost: 6 },
+] as const;
+
+/* ═══════════ HEALING TIMELINES ═══════════ */
+export interface HealStep {
+  d: number;
+  t: string;
+  desc: string;
+}
+
+export const HEAL: Record<string, HealStep[]> = {
+  cannabis: [
+    { d: 1, t: "THC levels dropping", desc: "Your body is starting to clear THC. Mood may fluctuate — that's normal." },
+    { d: 3, t: "Sleep disruption peaks", desc: "Vivid dreams and restlessness are common. This passes." },
+    { d: 7, t: "Appetite normalizing", desc: "Your natural hunger signals are returning." },
+    { d: 14, t: "Mental clarity improving", desc: "Brain fog is lifting. Memory and focus sharpening." },
+    { d: 30, t: "Lung function improving", desc: "If you smoked, your lungs are repairing. Coughing may increase temporarily as they clear out." },
+    { d: 60, t: "Emotional regulation stabilizing", desc: "Your endocannabinoid system is recalibrating. Emotions feel more balanced." },
+    { d: 90, t: "Full neurological recovery underway", desc: "Your brain's dopamine system is normalizing. Motivation and pleasure from everyday things returns." },
+  ],
+  nicotine: [
+    { d: 0.08, t: "Heart rate normalizing", desc: "Within 2 hours, your heart rate and blood pressure drop." },
+    { d: 1, t: "Carbon monoxide cleared", desc: "Oxygen levels in your blood return to normal." },
+    { d: 3, t: "Nicotine leaves your body", desc: "The physical withdrawal peaks now — but it's the last time." },
+    { d: 7, t: "Nerve endings regrowing", desc: "Taste and smell are coming back. Food tastes better." },
+    { d: 14, t: "Circulation improving", desc: "Walking and physical activity gets easier." },
+    { d: 30, t: "Lung cilia regenerating", desc: "Your lungs are cleaning themselves. Coughing decreases." },
+    { d: 90, t: "Lung function up 30%", desc: "Your lung capacity has significantly increased." },
+    { d: 365, t: "Heart disease risk halved", desc: "Your risk of coronary heart disease is now half that of a smoker." },
+  ],
+  alcohol: [
+    { d: 1, t: "Blood sugar stabilizing", desc: "Your body is no longer processing alcohol. Hydration improving." },
+    { d: 3, t: "Withdrawal window closing", desc: "The hardest physical part is passing. Your body is adjusting." },
+    { d: 7, t: "Sleep quality improving", desc: "REM sleep is returning. You'll start feeling more rested." },
+    { d: 14, t: "Liver begins healing", desc: "Liver fat can decrease by up to 15%. Skin starts clearing up." },
+    { d: 30, t: "Blood pressure normalizing", desc: "Reduced risk of stroke. Liver fat continues decreasing." },
+    { d: 60, t: "Immune system strengthening", desc: "Your body fights infections better. Energy levels noticeably higher." },
+    { d: 90, t: "Mental health improving", desc: "Anxiety and depression symptoms often significantly reduce." },
+  ],
+  porn: [
+    { d: 3, t: "Dopamine receptors recovering", desc: "Your brain is starting to recalibrate what feels rewarding." },
+    { d: 7, t: "Urges peak then decline", desc: "The first week is the hardest. From here, it gets easier." },
+    { d: 14, t: "Focus and motivation improving", desc: "Without the dopamine spikes, your brain finds other things more engaging." },
+    { d: 30, t: "Rewiring underway", desc: "Neural pathways are weakening. New, healthier patterns forming." },
+    { d: 60, t: "Emotional connections deepening", desc: "Intimacy and real human connection feel more natural and rewarding." },
+    { d: 90, t: "Significant neurological recovery", desc: "Brain scans show measurable changes in prefrontal cortex activity. Self-control stronger." },
+  ],
+  default: [
+    { d: 1, t: "First day complete", desc: "You showed up. That's the foundation everything else builds on." },
+    { d: 7, t: "One week strong", desc: "Your brain is starting to form new patterns." },
+    { d: 14, t: "Two weeks — habit weakening", desc: "The old habit's neural pathways are getting weaker." },
+    { d: 30, t: "One month milestone", desc: "You're building real momentum. The hardest part is behind you." },
+    { d: 60, t: "Two months — new normal forming", desc: "This is becoming who you are, not just something you're doing." },
+    { d: 90, t: "Three months — deeply rooted", desc: "Neurological changes are now well-established." },
+  ],
+};
+
+export function getHealKey(name: string): string {
+  const n = name.toLowerCase();
+  if (n.includes("cannabis") || n.includes("weed") || n.includes("thc") || n.includes("marijuana")) return "cannabis";
+  if (n.includes("juul") || n.includes("nicotine") || n.includes("vape") || n.includes("cigarette") || n.includes("smoking")) return "nicotine";
+  if (n.includes("alcohol") || n.includes("drinking") || n.includes("booze") || n.includes("beer") || n.includes("wine")) return "alcohol";
+  if (n.includes("porn") || n.includes("fap") || n.includes("nofap")) return "porn";
+  return "default";
+}

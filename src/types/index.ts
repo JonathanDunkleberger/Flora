@@ -50,6 +50,14 @@ export interface HabitWithStats extends Habit {
   logs: HabitLog[];
 }
 
+/** Quit-specific data stored in localStorage per habit */
+export interface QuitData {
+  quitDate: string;       // ISO date when quit began
+  dailyCost: number;      // $ saved per day
+  reason: string;         // personal reason
+  urges: string[];        // array of ISO dates when urges were logged
+}
+
 export interface EarnedMilestones {
   [key: string]: boolean; // "habitId:days" -> true
 }
