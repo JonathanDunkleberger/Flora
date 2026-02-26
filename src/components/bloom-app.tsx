@@ -256,20 +256,6 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
       if (!wasComplete && data.action === "logged") {
         const streak = getStreak(hId) + 1;
         setTimeout(() => checkMilestones(hId, streak), 100);
-        // Bounce-back recovery coins
-        if (bounceBackDay > 0) {
-          const milestone = BOUNCE_BACK.find((b) => b.d === bounceBackDay);
-          if (milestone) {
-            setCoins((p) => p + milestone.c);
-            setCoinToast({ msg: `Bounce back! +${milestone.c}`, icon: RefreshCw });
-            fetch("/api/coins", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ coins: coins + milestone.c, earned }),
-            }).catch(() => {});
-          }
-          setBounceBackDay((d) => d + 1);
-        }
       }
     } catch {
       router.refresh();
@@ -358,6 +344,32 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
       router.refresh();
     }
   };
+
+  // Bounce-back recovery: check once per day when any habit is completed
+  useEffect(() => {
+    if (!mounted || !habits.length || bounceBackDay < 0) return;
+    const anyDoneToday = habits.some((h) => isHappy(h.id));
+    if (anyDoneToday && bounceBackDay >= 0) {
+      const lastBBDate = typeof window !== "undefined" ? localStorage.getItem("bb_date") || "" : "";
+      if (lastBBDate !== todayStr) {
+        try { localStorage.setItem("bb_date", todayStr); } catch { /* noop */ }
+        const newBB = bounceBackDay + 1;
+        setBounceBackDay(newBB);
+        const recovery = BOUNCE_BACK.find((b) => b.d === newBB);
+        if (recovery) {
+          setCoins((p) => p + recovery.c);
+          setCoinToast({ msg: recovery.msg, icon: RefreshCw });
+          fetch("/api/coins", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ coins: coins + recovery.c, earned }),
+          }).catch(() => {});
+        }
+        if (newBB >= 7) setBounceBackDay(-1); // Recovery complete
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habits, mounted, todayStr]);
 
   useEffect(() => {
     if (page === "add" && inputRef.current) setTimeout(() => inputRef.current?.focus(), 120);
@@ -540,6 +552,18 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                   <Download size={13} />
                 </button>
               )}
+              {/* Mood indicator */}
+              {habits.length > 0 && (
+                <div style={{
+                  position: "absolute", bottom: 8, left: 8,
+                  background: "rgba(0,0,0,0.35)", backdropFilter: "blur(8px)", borderRadius: 8,
+                  padding: "3px 8px", fontSize: 9, fontWeight: 600, color: "rgba(255,255,255,0.7)",
+                  display: "flex", alignItems: "center", gap: 4, zIndex: 5,
+                }}>
+                  <span>{allDone ? "🌟" : todayPct >= 0.5 ? "😊" : todayPct > 0 ? "🌱" : "😴"}</span>
+                  {allDone ? "Thriving" : todayPct >= 0.5 ? "Happy" : todayPct > 0 ? "Waking up" : "Sleepy"}
+                </div>
+              )}
             </div>
 
             {/* Progress bar */}
@@ -559,7 +583,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
             )}
 
             {/* Bounce-back recovery banner */}
-            {bounceBackDay > 0 && bounceBackDay <= 3 && (
+            {bounceBackDay > 0 && bounceBackDay <= 7 && !allDone && (
               <div style={{
                 margin: "8px 2px 0", padding: "10px 14px", borderRadius: 12,
                 background: "linear-gradient(135deg,rgba(76,175,80,0.08),rgba(102,255,170,0.05))",
@@ -567,13 +591,18 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
               }}>
                 <RefreshCw size={16} color="#4caf50" />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: th.text }}>Bounce-back day {bounceBackDay}/3</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: th.text }}>
+                    {bounceBackDay === 1 ? "You showed up. That's everything." : bounceBackDay <= 3 ? "Building momentum — keep it rolling!" : "You're back in the groove. Your creatures are so happy!"}
+                  </div>
                   <div style={{ fontSize: 10, color: th.textSub }}>
-                    Complete habits to earn recovery coins!
+                    {7 - bounceBackDay}d to full recovery • +{BOUNCE_BACK.find((b) => b.d === bounceBackDay)?.c ?? 0} coins earned today
                   </div>
                 </div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#4caf50" }}>
-                  +{BOUNCE_BACK.find((b) => b.d === bounceBackDay)?.c ?? 0}
+                <div style={{
+                  fontSize: 10, fontWeight: 700, color: "#4caf50",
+                  background: "rgba(76,175,80,0.1)", borderRadius: 8, padding: "3px 8px",
+                }}>
+                  Day {bounceBackDay}/7
                 </div>
               </div>
             )}
@@ -682,6 +711,66 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
             </div>
 
             {/* All activity heatmap */}
+            {habits.length > 0 && (() => {
+              // Streak-at-risk alerts
+              const atRisk = habits.filter((h) => !isHappy(h.id) && getStreak(h.id) >= 3);
+              return atRisk.length > 0 ? (
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                  {atRisk.slice(0, 2).map((h) => (
+                    <div key={h.id} onClick={() => toggleCompletion(h.id)} style={{
+                      padding: "8px 12px", borderRadius: 10, cursor: "pointer",
+                      background: `linear-gradient(90deg,${h.color}08,${h.color}03)`,
+                      border: `1px solid ${h.color}18`,
+                      display: "flex", alignItems: "center", gap: 8, transition: "all .15s",
+                    }}>
+                      <Flame size={12} color={h.color} />
+                      <span style={{ flex: 1, fontSize: 11, color: th.text }}>
+                        <b>{h.name}</b> — tap to protect your <span style={{ color: h.color, fontWeight: 700 }}>{getStreak(h.id)}d streak</span>
+                      </span>
+                      <ChevronRight size={12} color={th.textFaint} />
+                    </div>
+                  ))}
+                </div>
+              ) : null;
+            })()}
+
+            {/* Next evolution preview */}
+            {habits.length > 0 && (() => {
+              const closest = habits
+                .map((h) => ({ h, stage: getStageForId(h.id), total: getTotal(h.id) }))
+                .filter((c) => c.stage < 4)
+                .map((c) => ({ ...c, next: STAGE_THRESHOLDS[c.stage + 1], remaining: STAGE_THRESHOLDS[c.stage + 1] - c.total }))
+                .sort((a, b) => a.remaining - b.remaining)[0];
+              if (!closest || closest.remaining > 10) return null;
+              return (
+                <div style={{
+                  marginTop: 8, padding: "10px 14px", borderRadius: 12,
+                  background: `linear-gradient(135deg,${closest.h.color}06,rgba(255,215,0,0.03))`,
+                  border: `1px solid ${closest.h.color}15`,
+                  display: "flex", alignItems: "center", gap: 10,
+                }}>
+                  <div style={{ position: "relative" }}>
+                    <Creature stage={closest.stage} color={closest.h.color} happy={true} size={32} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: th.text }}>
+                      {closest.h.name} evolves in <span style={{ color: closest.h.color }}>{closest.remaining} days</span>
+                    </div>
+                    <div style={{ fontSize: 10, color: th.textSub }}>
+                      {STAGE_LABELS[closest.stage]} → {STAGE_LABELS[closest.stage + 1]}
+                    </div>
+                  </div>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: "50%",
+                    border: `2px dashed ${closest.h.color}30`,
+                    display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.4,
+                  }}>
+                    <span style={{ fontSize: 10 }}>?</span>
+                  </div>
+                </div>
+              );
+            })()}
+
             {habits.length > 0 && (
               <div className="cd" style={{
                 padding: "12px 10px", marginTop: 10,
