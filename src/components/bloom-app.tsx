@@ -256,21 +256,39 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
     [habits]
   );
 
-  const getStageForId = useCallback(
-    (hId: string) => getStage(getTotal(hId)),
-    [getTotal]
+  const isHappy = useCallback(
+    (hId: string) => {
+      // Quit habits are "done" every day they remain clean
+      const h = habits.find((x) => x.id === hId);
+      if (h?.category === "quit") {
+        const qd = quitDataMap[hId];
+        return !!(qd?.quitDate && qd.quitDate <= todayStr);
+      }
+      return isComplete(hId, todayStr);
+    },
+    [isComplete, todayStr, habits, quitDataMap]
   );
 
-  const isHappy = useCallback(
-    (hId: string) => isComplete(hId, todayStr),
-    [isComplete, todayStr]
+  const getStageForId = useCallback(
+    (hId: string) => {
+      // Quit habits evolve based on clean days, not log count
+      const h = habits.find((x) => x.id === hId);
+      if (h?.category === "quit") {
+        const qd = quitDataMap[hId];
+        if (!qd?.quitDate) return 0;
+        const cleanDays = daysBetween(qd.quitDate, todayStr);
+        return getStage(cleanDays);
+      }
+      return getStage(getTotal(hId));
+    },
+    [getTotal, habits, quitDataMap, todayStr]
   );
 
   const buildHabits = habits.filter((h) => h.category !== "quit");
   const quitHabits = habits.filter((h) => h.category === "quit");
-  const totalToday = buildHabits.filter((h) => isHappy(h.id)).length;
-  const todayPct = buildHabits.length ? totalToday / buildHabits.length : 0;
-  const allDone = todayPct >= 1 && buildHabits.length > 0;
+  const totalToday = habits.filter((h) => isHappy(h.id)).length;
+  const todayPct = habits.length ? totalToday / habits.length : 0;
+  const allDone = todayPct >= 1 && habits.length > 0;
 
   // Confetti trigger
   useEffect(() => {
@@ -596,7 +614,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
             </h1>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            {page === "main" && buildHabits.length > 0 && (
+            {page === "main" && habits.length > 0 && (
               <span style={{
                 fontSize: 11, fontWeight: 700,
                 color: allDone ? "#4caf50" : th.textMuted,
@@ -604,7 +622,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 padding: "3px 10px", borderRadius: 100,
                 display: "flex", alignItems: "center", gap: 3, transition: "all .3s",
               }}>
-                <Flame size={11} />{totalToday}/{buildHabits.length}
+                <Flame size={11} />{totalToday}/{habits.length}
               </span>
             )}
             <div style={{
@@ -715,7 +733,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
           <div style={fs}>
             <div ref={terRef} style={{ position: "relative" }}>
               <TerrariumScene
-                habits={buildHabits} getStage={getStageForId} isHappy={isHappy}
+                habits={habits} getStage={getStageForId} isHappy={isHappy}
                 pct={todayPct} bouncingId={bouncingId} season={season} darkMode={darkMode}
                 ownedItems={ownedItems}
               />
@@ -791,7 +809,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
             )}
 
             {/* Gentle time-of-day nudge */}
-            {totalToday === 0 && buildHabits.length > 0 && (() => {
+            {buildHabits.length > 0 && buildHabits.filter((h) => isHappy(h.id)).length === 0 && (() => {
               const hr = new Date().getHours();
               const nudge = hr < 12
                 ? { Icon: Sunrise, msg: "Good morning! A small step forward today?" }
@@ -888,9 +906,9 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                         >
                           {h.name}
                         </span>
-                        {quit && cleanDays > 0 && (
+                        {quit && qd?.quitDate && (
                           <div style={{ fontSize: 10, color: th.textSub, fontWeight: 500, marginTop: 1 }}>
-                            {fmtDuration(cleanDays)} clean{moneySaved > 0 && <span style={{ color: "#4caf50", marginLeft: 4 }}>• {fmtMoney(moneySaved)} saved</span>}
+                            {cleanDays === 0 ? "Started today — you got this!" : `${fmtDuration(cleanDays)} clean`}{moneySaved > 0 && <span style={{ color: "#4caf50", marginLeft: 4 }}>• {fmtMoney(moneySaved)} saved</span>}
                           </div>
                         )}
                       </div>

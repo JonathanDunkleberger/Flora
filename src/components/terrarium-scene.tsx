@@ -246,6 +246,33 @@ export function TerrariumScene({
           const sz = Math.min(40 + st * 5, mx);
           const scale = sz / 52;
 
+          // Stage 0 = egg
+          if (st === 0) {
+            const eggSz = Math.min(38, mx);
+            const eggScale = eggSz / 52;
+            return (
+              <g key={h.id} transform={`translate(${px}, ${py}) rotate(${rotDeg})`}>
+                <g style={{
+                  animation: `pulse 2.5s ease-in-out infinite`,
+                  animationDelay: `${r() * 2}s`,
+                }}>
+                  <g transform={`translate(0, ${-eggSz / 2 - 2}) scale(${eggScale})`}>
+                    {/* Egg body */}
+                    <ellipse cx="0" cy="0" rx="7" ry="9" fill={h.color} />
+                    <ellipse cx="0" cy="-2" rx="5" ry="5.5" fill="white" opacity="0.15" />
+                    {/* Egg shine */}
+                    <ellipse cx="-2" cy="-3" rx="1.5" ry="2.5" fill="white" opacity="0.25" transform="rotate(-15)" />
+                    {/* Subtle crack lines for anticipation */}
+                    <path d="M-1.5 3 L0 1 L1.5 3.5" stroke={h.color} strokeWidth="0.6" fill="none" opacity="0.3" filter="url(#lp-soft)" />
+                  </g>
+                  {/* Name label */}
+                  <text y={eggSz / 2 + 8} textAnchor="middle" fontSize="8.5" fill="rgba(255,255,255,0.7)" fontWeight="600"
+                    style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>{h.name}</text>
+                </g>
+              </g>
+            );
+          }
+
           return (
             <g key={h.id} transform={`translate(${px}, ${py}) rotate(${rotDeg})`}>
               <g style={{
