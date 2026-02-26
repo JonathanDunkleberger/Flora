@@ -1,0 +1,138 @@
+"use client";
+
+import { useState } from "react";
+import { Check, Crown } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+export default function PricingPage() {
+  const [annual, setAnnual] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  async function handleCheckout(priceId: string) {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priceId }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch {
+      // Handle error
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const plans = [
+    {
+      name: "Free",
+      price: "$0",
+      period: "forever",
+      features: [
+        "3 habits",
+        "Fern plant only",
+        "30-day history",
+        "Basic garden",
+        "Daily check-ins",
+      ],
+      cta: "Current Plan",
+      disabled: true,
+    },
+    {
+      name: "Bloom Pro",
+      price: annual ? "$39.99" : "$4.99",
+      period: annual ? "/year" : "/month",
+      savings: annual ? "Save $20/year" : null,
+      features: [
+        "Unlimited habits",
+        "All 6 plant types",
+        "Full history",
+        "Heat map analytics",
+        "All garden ambience effects",
+        "Advanced statistics",
+        "Priority support",
+      ],
+      cta: "Start Growing",
+      priceId: annual
+        ? process.env.NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID || "price_yearly"
+        : process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID || "price_monthly",
+      isPro: true,
+    },
+  ];
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 pt-20 pb-24">
+      <div className="text-center mb-8">
+        <h1 className="text-2xl font-bold text-slate-800">Grow Without Limits</h1>
+        <p className="text-sm text-slate-500 mt-1">Upgrade to Bloom Pro to unlock your full garden potential.</p>
+      </div>
+
+      {/* Toggle */}
+      <div className="flex items-center justify-center gap-3 mb-8">
+        <span className={cn("text-sm font-medium", !annual ? "text-slate-800" : "text-slate-400")}>Monthly</span>
+        <button
+          onClick={() => setAnnual(!annual)}
+          className={cn("w-12 h-7 rounded-full p-1 transition-colors",
+            annual ? "bg-bloom-500" : "bg-slate-300"
+          )}
+        >
+          <div className={cn("w-5 h-5 bg-white rounded-full transition-transform shadow-sm",
+            annual ? "translate-x-5" : "translate-x-0"
+          )} />
+        </button>
+        <span className={cn("text-sm font-medium", annual ? "text-slate-800" : "text-slate-400")}>
+          Annual <span className="text-bloom-600 text-xs font-bold">Save 33%</span>
+        </span>
+      </div>
+
+      {/* Plans */}
+      <div className="grid gap-4">
+        {plans.map((plan) => (
+          <div key={plan.name}
+            className={cn("bg-white rounded-3xl border p-6",
+              plan.isPro ? "border-bloom-300 shadow-lg shadow-bloom-500/10" : "border-slate-200"
+            )}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  {plan.isPro && <Crown className="w-5 h-5 text-amber-500" />}
+                  <h3 className="font-bold text-lg text-slate-800">{plan.name}</h3>
+                </div>
+                {plan.savings && (
+                  <span className="text-xs text-bloom-600 font-medium">{plan.savings}</span>
+                )}
+              </div>
+              <div className="text-right">
+                <span className="text-3xl font-bold text-slate-800">{plan.price}</span>
+                <span className="text-sm text-slate-400">{plan.period}</span>
+              </div>
+            </div>
+
+            <ul className="space-y-2 mb-6">
+              {plan.features.map((feature) => (
+                <li key={feature} className="flex items-center gap-2 text-sm text-slate-600">
+                  <Check className={cn("w-4 h-4 shrink-0", plan.isPro ? "text-bloom-500" : "text-slate-400")} />
+                  {feature}
+                </li>
+              ))}
+            </ul>
+
+            <button
+              onClick={() => plan.priceId && handleCheckout(plan.priceId)}
+              disabled={plan.disabled || loading}
+              className={cn("w-full py-3 rounded-2xl font-semibold text-sm transition-colors tap-bounce",
+                plan.isPro
+                  ? "bg-bloom-500 hover:bg-bloom-600 text-white shadow-md shadow-bloom-500/25"
+                  : "bg-slate-100 text-slate-400 cursor-not-allowed"
+              )}
+            >
+              {loading && plan.isPro ? "Loading..." : plan.cta}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
