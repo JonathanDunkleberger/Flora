@@ -5,13 +5,20 @@ import "./globals.css";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Bloom — Grow Your Habits",
-  description: "Build positive habits and watch your creatures evolve. A beautiful habit tracker with a terrarium theme.",
-  keywords: ["habit tracker", "self improvement", "habit building", "creature evolution"],
+  title: "Bloom — Habit & Recovery Tracker",
+  description: "Quit bad habits. Grow new ones. A beautiful habit tracker with evolving creatures.",
+  keywords: ["habit tracker", "self improvement", "habit building", "creature evolution", "quit tracker", "recovery"],
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "Bloom",
   },
 };
@@ -21,7 +28,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#f8f8f6",
+  themeColor: "#0a0e18",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -32,7 +39,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
           <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Fraunces:ital,opsz,wght@0,9..144,100..900;1,9..144,100..900&display=swap" rel="stylesheet" />
-          <link rel="apple-touch-icon" href="/icon-192.svg" />
         </head>
         <body className="antialiased" style={{ background: "#f8f8f6", fontFamily: "'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif" }}>
           {children}
