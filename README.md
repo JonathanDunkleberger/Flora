@@ -98,83 +98,31 @@ Recovery features are **never** gated. Breathing, urge support, healing timeline
 
 ## Architecture
 
-> Full interactive diagram: [`docs/architecture.html`](docs/architecture.html)
-
-The system is organized in five layers. Each layer communicates downward through React state and localStorage.
-
-### Experience Layer
-
-| Module | Mode | Details |
-|--------|------|---------|
-| **Habit Tracking** | Dual mode | **Build** → daily checkbox · **Quit** → auto sobriety timer · Pause/resume · Custom colors |
-| **Urge System** | 3 tools | **Breathe** → 4-4-6 guided cycle · **Write** → journal + trigger tags · **Redirect** → physical activity · +3 coins per urge survived |
-| **Planet & Creatures** | 5 stages | Egg → Hatchling → Young → Growing → Evolved · 72h egg progression w/ CSS anim · Creature mood reactions · Shop decorations |
-| **Subscription** | Freemium | **Free** → 3 habits, all recovery · **Tend+** → $4.99/mo, $29.99/yr · Recovery features never gated · 5 soft + 1 hard paywall CTAs |
-
-### Frontend Layer
-
-| Component | Technology | Details |
-|-----------|-----------|---------|
-| **Next.js 15** | App Router + Tailwind | React 19 server components · Fraunces + DM Sans typography · CSS-only animations · Mobile-first (375px base) |
-| **React Components** | 7 screens | Planet → SVG + sprite rendering · HabitRow → status + medallion · UrgeModal → 3-option flow · MilestoneCoin → SVG component |
-| **Asset System** | Sprout Lands pack | 25 creature sprites × 5 stages · 35+ decoration sprites · CSS `hue-rotate` for colors · `image-rendering: pixelated` |
-| **Icon System** | Lucide React | Zero emoji policy · Custom SVG milestone coins · Shield icon for quit habits · Consistent 16–24px sizing |
-
-### Game Systems
-
-| System | Details |
-|--------|---------|
-| **Milestone Engine** | 13 AA-style tiers: 2h, 6h, 12h, 24h, 48h, 72h → 7d to 365d · Color: stone → bronze → green → blue → purple → red → gold · Re-earnable on quit reset |
-| **Coin System** | 250 starting coins · +3 per urge survived · +coins per milestone tier · Spend in World Shop |
-| **Egg Progression** | 72-hour hatch cycle · Phases: fresh → stirring → cracking → hatching · Crack overlays via `::after` · Wobble + shake + sparkle · Urge survival reduces hatch time |
-| **Creature Moods** | **Healthy** → bob + blink · **Neglected** → droopy + desaturated · **Thriving** → sparkles + scale 1.05 · **Sleeping** → ZZZ + still |
-
-### Data Layer
-
-All data is stored locally. No accounts required. No telemetry.
-
-| Store | Details |
-|-------|---------|
-| **Storage** | Web → localStorage · Native → AsyncStorage · Save on every state change · No cloud sync (v1) |
-| **Habit Records** | id, name, type, color, dates · Completions map (id:date) · Creature stage + evolution · Pause state + reason text |
-| **Urge Log** | habitId + timestamp · Tags: Stress, Boredom, Social, Night · Free-text note · Method used + survived flag |
-| **Progress State** | Coin balance + transaction log · Milestone earned flags · Owned shop items · Tend+ subscription state |
-
-### Deployment Layer
-
-| Platform | Technology | Details |
-|----------|-----------|---------|
-| **Web** | Vercel | Automatic deploy on push · Preview branches · Edge functions |
-| **iOS** | React Native + Expo | Expo managed workflow · StoreKit for subscriptions · TestFlight → production |
-| **Billing** | Multi-platform | Web → Stripe Checkout · iOS → StoreKit / RevenueCat · Monthly ($4.99) + Annual ($29.99) |
+<p align="center">
+  <a href="docs/architecture.html">
+    <img src="public/tend-architecture.svg" alt="System Architecture" width="100%" />
+  </a>
+  <br />
+  <em>Full interactive diagram: <code>docs/architecture.html</code></em>
+</p>
 
 ### Stack
 
-```
-Next.js 15 · React 19 · Tailwind CSS · Fraunces · DM Sans
-Lucide · Sprout Lands · localStorage · Stripe · Vercel · Expo · StoreKit
-```
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Framework** | Next.js 15 (App Router) | Server components, routing, static export |
+| **UI** | React 19 + Tailwind CSS | Component architecture, utility styling |
+| **Rendering** | Pixel art sprites (Sprout Lands) | Creature and decoration assets |
+| **Icons** | Lucide React | Consistent, clean iconography |
+| **Typography** | Fraunces + DM Sans | Serif display + clean body |
+| **Storage** | localStorage / AsyncStorage | Zero-server, privacy-first persistence |
+| **Payments** | Stripe (web) / StoreKit (iOS) | Subscription billing |
+| **Hosting** | Vercel | Edge deployment, instant previews |
+| **Native** | React Native + Expo | iOS App Store distribution |
 
 ### Data Model
 
-```
-AppState
-├── habits[]
-│   ├── id, name, type: 'build' | 'quit', color
-│   ├── createdAt, quitDate (quit only), dailyCost (quit only)
-│   ├── reason, paused
-│   └── creature: { stage: 0-4, color }
-├── completions: Record<habitId:date, boolean>
-├── urgeLog[]
-│   ├── habitId, timestamp, tags[], note, method
-│   └── survived: boolean
-├── milestones: Record<habitId:key, earned>
-├── coins: number
-├── ownedItems: string[]
-├── isPro: boolean
-├── proExpiry: ISO string | null
-└── onboardingComplete: boolean
-```
+All data is stored locally. No accounts. No servers. No telemetry.
 
 ---
 
