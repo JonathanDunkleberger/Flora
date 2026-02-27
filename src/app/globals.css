@@ -359,9 +359,11 @@ body {
   border-radius: 22px 22px 0 0;
   width: 100%;
   max-width: 520px;
-  max-height: 80vh;
-  overflow-y: auto;
-  padding: 20px 18px 28px;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
   animation: slideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

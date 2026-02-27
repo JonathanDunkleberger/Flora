@@ -16,16 +16,15 @@ export function MultiHabitHeatmap({ habits, isDone, getCleanDays, th }: MultiHab
   const weeks = 12;
   const cellSize = 8;
   const cellGap = 2;
-  const colGap = 16;
   const totalDays = weeks * 7;
 
-  const columns = useMemo(() => {
+  const rows = useMemo(() => {
     return habits.map((h) => {
       const isQuit = h.category === "quit";
       const cleanDays = isQuit && getCleanDays ? getCleanDays(h.id) : 0;
       const days: { date: string; done: boolean; isToday: boolean; isFuture: boolean }[] = [];
 
-      for (let i = 0; i < totalDays; i++) {
+      for (let i = totalDays - 1; i >= 0; i--) {
         const date = daysAgo(i);
         const now = new Date();
         const d = new Date(date + "T12:00:00");
@@ -34,7 +33,6 @@ export function MultiHabitHeatmap({ habits, isDone, getCleanDays, th }: MultiHab
         let done = false;
 
         if (isQuit) {
-          // For quit habits, a day is "done" if it falls within the clean period
           done = cleanDays > i;
         } else {
           done = isDone(h.id, date);
@@ -43,9 +41,7 @@ export function MultiHabitHeatmap({ habits, isDone, getCleanDays, th }: MultiHab
         days.push({ date, done, isToday, isFuture });
       }
 
-      // Abbreviate habit name to max 4 chars
-      const abbr = h.name.length > 4 ? h.name.slice(0, 4) : h.name;
-
+      const abbr = h.name.length > 5 ? h.name.slice(0, 5) : h.name;
       return { habit: h, days, abbr };
     });
   }, [habits, isDone, getCleanDays, totalDays]);
@@ -70,55 +66,57 @@ export function MultiHabitHeatmap({ habits, isDone, getCleanDays, th }: MultiHab
       }}>
         All Habits
       </div>
-      <div style={{
-        overflowX: habits.length > 6 ? "auto" : "visible",
-        paddingBottom: 4,
-      }}>
-        <div style={{
-          display: "flex",
-          gap: colGap,
-          justifyContent: habits.length <= 6 ? "center" : "flex-start",
-          minWidth: "fit-content",
-        }}>
-          {columns.map(({ habit, days, abbr }) => {
-            const { r, g, b } = cr(habit.color);
-            return (
-              <div key={habit.id} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                {/* Color dot */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {rows.map(({ habit, days, abbr }) => {
+          const { r, g, b } = cr(habit.color);
+          return (
+            <div key={habit.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {/* Label */}
+              <div style={{
+                width: 40, flexShrink: 0, display: "flex", alignItems: "center", gap: 4,
+              }}>
                 <div style={{
-                  width: 6, height: 6, borderRadius: "50%",
-                  background: habit.color, marginBottom: 3,
+                  width: 5, height: 5, borderRadius: "50%",
+                  background: habit.color, flexShrink: 0,
                 }} />
-                {/* Abbreviated name */}
                 <div style={{
                   fontSize: 9, fontWeight: 600, color: habit.color,
-                  marginBottom: 6, lineHeight: 1,
+                  lineHeight: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                 }}>
                   {abbr}
                 </div>
-                {/* Vertical column of cells — today at top, oldest at bottom */}
-                <div style={{ display: "flex", flexDirection: "column", gap: cellGap }}>
-                  {days.map((d, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        width: cellSize, height: cellSize, borderRadius: 2,
-                        background: d.isFuture
-                          ? "transparent"
-                          : d.done
-                            ? `rgba(${r},${g},${b},1)`
-                            : `rgba(${r},${g},${b},0.08)`,
-                        border: d.isToday ? `1px solid ${habit.color}` : "none",
-                        boxSizing: "border-box" as const,
-                      }}
-                      title={`${d.date}: ${d.done ? "✓" : "—"}`}
-                    />
-                  ))}
-                </div>
               </div>
-            );
-          })}
-        </div>
+              {/* Horizontal grid: oldest → today (left → right) */}
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: `repeat(${totalDays}, ${cellSize}px)`,
+                gridTemplateRows: `${cellSize}px`,
+                gap: cellGap,
+                overflowX: "hidden",
+                flex: 1,
+                direction: "rtl",
+              }}>
+                {/* Render reversed so RTL direction shows today on right */}
+                {[...days].reverse().map((d, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      width: cellSize, height: cellSize, borderRadius: 2,
+                      background: d.isFuture
+                        ? "transparent"
+                        : d.done
+                          ? `rgba(${r},${g},${b},1)`
+                          : `rgba(${r},${g},${b},0.08)`,
+                      border: d.isToday ? `1px solid ${habit.color}` : "none",
+                      boxSizing: "border-box" as const,
+                    }}
+                    title={`${d.date}: ${d.done ? "✓" : "—"}`}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -6,13 +6,15 @@ import { Creature } from "@/components/creature";
 import type { ThemeColors } from "@/lib/constants";
 
 interface BreathingTimerProps {
-  habit: { name: string; color: string; id: string };
+  habit?: { name: string; color: string; id: string } | null;
   onComplete: () => void;
   onClose: () => void;
   th: ThemeColors;
 }
 
 export function BreathingTimer({ habit, onComplete, onClose }: BreathingTimerProps) {
+  const color = habit?.color || "#4caf50";
+  const label = habit ? `Urge surfing · ${habit.name}` : "Breathe";
   const [phase, setPhase] = useState<"ready" | "inhale" | "hold" | "exhale" | "done">("ready");
   const [seconds, setSeconds] = useState(0);
   const [cycle, setCycle] = useState(0);
@@ -57,12 +59,12 @@ export function BreathingTimer({ habit, onComplete, onClose }: BreathingTimerPro
               fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.25)",
               marginBottom: 24, letterSpacing: 1.5, textTransform: "uppercase",
             }}>
-              Urge surfing · {habit.name}
+              {label}
             </div>
             <div style={{ position: "relative", width: 160, height: 160, margin: "0 auto 28px" }}>
               <svg width="160" height="160" viewBox="0 0 160 160" style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}>
                 <circle cx="80" cy="80" r={ringR} fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="4" />
-                <circle cx="80" cy="80" r={ringR} fill="none" stroke={habit.color} strokeWidth="4"
+                <circle cx="80" cy="80" r={ringR} fill="none" stroke={color} strokeWidth="4"
                   strokeDasharray={ringC} strokeDashoffset={ringC * (1 - ringPct)} strokeLinecap="round"
                   style={{ transition: "stroke-dashoffset 1s linear" }} opacity="0.8" />
               </svg>
@@ -71,7 +73,7 @@ export function BreathingTimer({ habit, onComplete, onClose }: BreathingTimerPro
                   transform: `scale(${phase === "inhale" ? 1 + ringPct * 0.15 : phase === "hold" ? 1.15 : 1.15 - ringPct * 0.15})`,
                   transition: "transform 1s ease-in-out",
                 }}>
-                  <Creature stage={3} color={habit.color} happy={true} size={64} />
+                  <Creature stage={3} color={color} happy={true} size={64} />
                 </div>
               </div>
             </div>
@@ -84,9 +86,9 @@ export function BreathingTimer({ habit, onComplete, onClose }: BreathingTimerPro
                   onClick={() => { setPhase("inhale"); setSeconds(0); }}
                   style={{
                     padding: "14px 36px", borderRadius: 14, border: "none",
-                    background: `linear-gradient(135deg,${habit.color},${habit.color}bb)`,
+                    background: `linear-gradient(135deg,${color},${color}bb)`,
                     color: "white", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
-                    boxShadow: `0 4px 24px ${habit.color}30`,
+                    boxShadow: `0 4px 24px ${color}30`,
                   }}
                 >
                   Start breathing
@@ -108,7 +110,7 @@ export function BreathingTimer({ habit, onComplete, onClose }: BreathingTimerPro
         {phase === "done" && (
           <div style={{ animation: "fadeUp .4s ease" }}>
             <div style={{ marginBottom: 16 }}>
-              <Creature stage={4} color={habit.color} happy={true} size={80} />
+              <Creature stage={4} color={color} happy={true} size={80} />
             </div>
             <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 22, fontWeight: 500, color: "white", marginBottom: 8 }}>
               You made it through

@@ -1,6 +1,6 @@
 "use client";
 
-import { X, Infinity, Coins, TrendingUp, TreePine, Palette, Sparkles } from "lucide-react";
+import { X, Infinity, TrendingUp, TreePine, Sparkles } from "lucide-react";
 
 interface TendPlusScreenProps {
   onClose: () => void;
@@ -15,24 +15,14 @@ export function TendPlusScreen({ onClose, onSubscribe }: TendPlusScreenProps) {
       desc: "Track everything that matters to your recovery",
     },
     {
-      Icon: Coins,
-      title: "+5 daily coins",
-      desc: "Bonus coins every time you open the app",
-    },
-    {
       Icon: TrendingUp,
       title: "Full insights",
-      desc: "Trigger patterns, synergies, and streak analysis",
+      desc: "Trigger patterns, synergies, and deep analytics",
     },
     {
       Icon: TreePine,
-      title: "Premium decorations",
-      desc: "Unlock all trees, lanterns, and seasonal items",
-    },
-    {
-      Icon: Palette,
-      title: "Custom colors",
-      desc: "Pick any color for your habits and creatures",
+      title: "Premium world",
+      desc: "All trees, decorations, and seasonal items",
     },
   ];
 
@@ -167,6 +157,26 @@ export function TendPlusScreen({ onClose, onSubscribe }: TendPlusScreenProps) {
           >
             Restore purchase
           </button>
+        </div>
+
+        {/* Legal links */}
+        <div style={{ textAlign: "center", marginTop: 16, display: "flex", justifyContent: "center", gap: 16 }}>
+          <a
+            href="https://tendhabit.com/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", textDecoration: "none" }}
+          >
+            Privacy Policy
+          </a>
+          <a
+            href="https://tendhabit.com/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", textDecoration: "none" }}
+          >
+            Terms of Use
+          </a>
         </div>
       </div>
     </div>

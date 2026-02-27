@@ -55,6 +55,7 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
   const [streakFreezes, setStreakFreezes] = useState<Record<string, number>>(initialStreakFreezes);
   const [pausedHabits, setPausedHabits] = useState<Record<string, boolean>>({});
   const [earnedMilestoneCoins, setEarnedMilestoneCoins] = useState<Record<string, string[]>>({});
+  const [stageDrops, setStageDrops] = useState<Record<string, number>>({});
   const [milestoneCelebration, setMilestoneCelebration] = useState<{ tier: CoinTier; habitName: string; coinReward: number } | null>(null);
   const [darkMode, setDarkMode] = useState(false);
   const [season, setSeason] = useState<SeasonKey>(getSeason());
@@ -95,6 +96,7 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
   const [bounceBackDay, setBounceBackDay] = useState(0);
   const [quitDataMap, setQuitDataMap] = useState<Record<string, QuitData>>({});
   const [breathingHabit, setBreathingHabit] = useState<HabitWithStats | null>(null);
+  const [showBreathe, setShowBreathe] = useState(false);
   const [relapseHabit, setRelapseHabit] = useState<HabitWithStats | null>(null);
   const [urgeSupportHabit, setUrgeSupportHabit] = useState<HabitWithStats | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -198,6 +200,12 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
         if (rawMC) setEarnedMilestoneCoins(JSON.parse(rawMC));
       } catch { /* ignore */ }
 
+      // Load creature stage drops (relapse penalty)
+      try {
+        const rawSD = localStorage.getItem("tend_stage_drops");
+        if (rawSD) setStageDrops(JSON.parse(rawSD));
+      } catch { /* ignore */ }
+
       // Load Tend+ state
       const savedPro = localStorage.getItem("tend_pro");
       if (savedPro === "1") setIsPro(true);
@@ -267,6 +275,13 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
     }
   }, [earnedMilestoneCoins]);
 
+  // Persist stage drops
+  useEffect(() => {
+    if (typeof window !== "undefined" && Object.keys(stageDrops).length > 0) {
+      localStorage.setItem("tend_stage_drops", JSON.stringify(stageDrops));
+    }
+  }, [stageDrops]);
+
   // Persist dark mode & season
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("tend_dark", darkMode ? "1" : "0");
@@ -283,6 +298,21 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
       else localStorage.removeItem("tend_pro_expiry");
     }
   }, [isPro, proExpiry]);
+
+  // Handle ?upgraded=true URL param from Stripe redirect
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("upgraded") === "true") {
+      setIsPro(true);
+      setProExpiry(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString());
+      setShowPaywall(false);
+      setCoinToast({ msg: "Welcome to Tend+!", icon: Sparkles });
+      // Clean the URL
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Daily bonus coins for Tend+ users
   useEffect(() => {
@@ -454,18 +484,22 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
 
   const getStageForId = useCallback(
     (hId: string) => {
-      // Quit habits evolve based on best streak (survives relapse), not current streak alone
       const h = habits.find((x) => x.id === hId);
+      let stage: number;
       if (h?.category === "quit") {
         const qd = quitDataMap[hId];
         if (!qd?.quitDate) return 0;
         const cleanDays = daysBetween(qd.quitDate, todayStr);
         const best = Math.max(cleanDays, qd.bestStreak ?? 0);
-        return getStage(best);
+        stage = getStage(best);
+      } else {
+        stage = getStage(getTotal(hId));
       }
-      return getStage(getTotal(hId));
+      // Apply relapse stage drop penalty (creature drops one stage on relapse)
+      const drops = stageDrops[hId] || 0;
+      return Math.max(0, stage - drops);
     },
-    [getTotal, habits, quitDataMap, todayStr]
+    [getTotal, habits, quitDataMap, todayStr, stageDrops]
   );
 
   const buildHabits = habits.filter((h) => h.category !== "quit");
@@ -790,7 +824,7 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
     setStreakFreezes(newFreezes);
     setCoinToast({ msg: "Streak freeze activated!", icon: Shield });
     setCoins((prev) => {
-      const newCoins = prev - 50;
+      const newCoins = Math.max(0, prev - 50);
       fetch("/api/coins", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -819,7 +853,7 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
     haptic("light");
     setCoinToast({ msg: `${item.name} placed on your planet!`, icon: Store });
     setCoins((prev) => {
-      const newCoins = prev - item.price;
+      const newCoins = Math.max(0, prev - item.price);
       fetch("/api/coins", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -983,11 +1017,11 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
       {undoToast && <UndoToast {...undoToast} onDone={() => setUndoToast(null)} />}
 
       {/* Breathing timer overlay */}
-      {breathingHabit && (
+      {(breathingHabit || showBreathe) && (
         <BreathingTimer
           habit={breathingHabit}
-          onComplete={() => { setBreathingHabit(null); setCoinToast({ msg: "Urge surfed!", icon: Wind }); }}
-          onClose={() => setBreathingHabit(null)}
+          onComplete={() => { setBreathingHabit(null); setShowBreathe(false); setCoinToast({ msg: breathingHabit ? "Urge surfed!" : "Centered. +2 coins.", icon: Wind }); setCoins((p) => { const nv = p + (breathingHabit ? 0 : 2); if (nv !== p) fetch("/api/coins", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ coins: nv }) }).catch(() => {}); return nv; }); }}
+          onClose={() => { setBreathingHabit(null); setShowBreathe(false); }}
           th={th}
         />
       )}
@@ -1021,7 +1055,10 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
           cleanDays={getCleanDays(relapseHabit.id)}
           bestStreak={quitDataMap[relapseHabit.id]?.bestStreak}
           onConfirm={() => {
-            resetQuit(relapseHabit.id);
+            // Creature drops one stage on relapse
+            const hId = relapseHabit.id;
+            setStageDrops((prev) => ({ ...prev, [hId]: (prev[hId] || 0) + 1 }));
+            resetQuit(hId);
             setRelapseHabit(null);
             // +5 coins for honesty
             setCoins((p) => {
@@ -1082,7 +1119,7 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
       <div style={{ maxWidth: 520, margin: "0 auto", padding: "0 14px 90px" }} key={page} >
         <div style={{ animation: pageAnim || undefined }}>
         {/* HEADER */}
-        <div style={{ ...fs, padding: "14px 2px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ ...fs, padding: "14px 2px 8px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50, background: th.bg, backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
           {page !== "main" ? (
             <button
               onClick={() => { setPage("main"); setDetailId(null); setEditMode(false); }}
@@ -1172,6 +1209,7 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
               {[
                 { label: "Collection", Icon: LayoutGrid, color: th.textSub, action: () => { setPage("gallery"); setMenuOpen(false); } },
                 { label: "Insights", Icon: Sparkles, color: "#8B5CF6", action: () => { setPage("constellation"); setMenuOpen(false); } },
+                { label: "Breathe", Icon: Wind, color: "#38bdf8", action: () => { setShowBreathe(true); setMenuOpen(false); } },
                 { label: "Tend Together", Icon: Users, color: "#4caf50", action: () => { setPage("social"); setMenuOpen(false); } },
                 { label: "World Shop", Icon: Store, color: "#f59e0b", action: () => { setPage("shop"); setMenuOpen(false); } },
                 { label: darkMode ? "Light Mode" : "Dark Mode", Icon: darkMode ? Sun : Moon, color: th.textSub, action: () => { setDarkMode((d) => !d); setMenuOpen(false); } },
@@ -1370,7 +1408,7 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
                     {bounceBackDay === 1 ? "You showed up. That's everything." : bounceBackDay <= 3 ? "Building momentum — keep it rolling!" : "You're back in the groove. Your creatures are so happy!"}
                   </div>
                   <div style={{ fontSize: 10, color: th.textSub }}>
-                    {7 - bounceBackDay}d to full recovery • +{BOUNCE_BACK.find((b) => b.d === bounceBackDay)?.c ?? 0} coins earned today
+                    {bounceBackDay >= 6 ? "Almost there!" : bounceBackDay >= 4 ? `${7 - bounceBackDay} more days` : `Day ${bounceBackDay} of 7`} • +{BOUNCE_BACK.find((b) => b.d === bounceBackDay)?.c ?? 0} coins today
                   </div>
                 </div>
                 <div style={{
@@ -2114,7 +2152,8 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
       {page === "add" && (
         <div className="mbg" style={{ background: th.overlayBg }} onClick={(e) => { if (e.target === e.currentTarget) setPage("main"); }}>
           <div className="ml" style={{ background: th.modalBg }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            {/* Fixed header */}
+            <div style={{ padding: "20px 18px 12px", flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 700, color: th.text }}>Add habit</h2>
               <button
                 onClick={() => setPage("main")}
@@ -2123,6 +2162,9 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
                 <X size={18} />
               </button>
             </div>
+
+            {/* Scrollable presets */}
+            <div style={{ flex: 1, overflowY: "auto", padding: "0 18px", WebkitOverflowScrolling: "touch" }}>
 
             {/* ── Quit presets ── */}
             {(() => {
@@ -2176,7 +2218,10 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
                 </div>
               );
             })}
-            <div style={{ marginTop: 6 }}>
+            </div>{/* end scrollable presets */}
+
+            {/* Fixed footer — custom input */}
+            <div style={{ padding: "12px 18px 28px", flexShrink: 0, borderTop: `1px solid ${th.cardBorder}` }}>
               <div className="lb" style={{ marginBottom: 5, color: th.label }}>Custom</div>
               <div style={{ display: "flex", gap: 5, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
                 {HABIT_COLORS.map((c) => (
@@ -2224,7 +2269,7 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
                 </button>
               </div>
               {addError && (
-                <div style={{ marginTop: 8, color: "#ef4444", fontSize: 12, fontWeight: 500 }}>{addError}</div>
+                <div style={{ marginTop: 8, color: th.textMuted, fontSize: 12, fontWeight: 500 }}>{addError}</div>
               )}
             </div>
           </div>
