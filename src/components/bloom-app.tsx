@@ -1067,19 +1067,27 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
             <div
               className="cd"
               style={{
-                padding: 22, textAlign: "center", marginBottom: 10,
-                background: `linear-gradient(180deg, ${detailHabit.color}08 0%, ${th.card} 50%)`,
+                padding: "28px 22px 22px", textAlign: "center", marginBottom: 10,
+                background: th.card,
                 borderColor: th.cardBorder, boxShadow: th.cardShadow,
+                position: "relative", overflow: "hidden",
               }}
             >
-              {dq ? (
-                /* ── Quit habit hero: big clean counter ── */
-                <>
-                  <Creature stage={Math.min(4, Math.floor(cleanD / 7))} color={detailHabit.color} happy={cleanD > 0} size={88} />
-                </>
-              ) : (
-                <Creature stage={getStageForId(detailHabit.id)} color={detailHabit.color} happy={isHappy(detailHabit.id)} size={88} />
-              )}
+              {/* Vignette glow behind creature */}
+              <div style={{
+                position: "absolute", top: 0, left: 0, right: 0, height: 200,
+                background: `radial-gradient(circle at 50% 40%, ${detailHabit.color}22 0%, transparent 70%)`,
+                pointerEvents: "none",
+              }} />
+
+              {/* Single hero creature — 140px, centered */}
+              <div style={{ position: "relative", zIndex: 1 }}>
+                {dq ? (
+                  <Creature stage={Math.min(4, Math.floor(cleanD / 7))} color={detailHabit.color} happy={cleanD > 0} size={140} />
+                ) : (
+                  <Creature stage={getStageForId(detailHabit.id)} color={detailHabit.color} happy={isHappy(detailHabit.id)} size={140} />
+                )}
+              </div>
 
               {editMode ? (
                 <div style={{ marginTop: 8, maxWidth: 260, margin: "8px auto 0" }}>

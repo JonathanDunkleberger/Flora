@@ -43,6 +43,31 @@
     70% { transform: translateY(-4px); }
     100% { transform: translateY(0); }
   }
+  @keyframes creatureFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+  @keyframes creatureIdleFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+  @keyframes sparkle {
+    0%, 100% { opacity: 0; transform: scale(0.5); }
+    50% { opacity: 0.8; transform: scale(1.2); }
+  }
+  @keyframes completionBounce {
+    0% { transform: translateY(0); }
+    20% { transform: translateY(-12px); }
+    40% { transform: translateY(0); }
+    60% { transform: translateY(-4px); }
+    80% { transform: translateY(0); }
+    100% { transform: translateY(0); }
+  }
+  @keyframes completionSparkle {
+    0% { opacity: 0; transform: translate(0, 0) scale(0); }
+    30% { opacity: 1; transform: translate(var(--sx), var(--sy)) scale(1); }
+    100% { opacity: 0; transform: translate(var(--ex), var(--ey)) scale(0.3); }
+  }
   @keyframes float {
     0%, 100% { transform: translate(0, 0); }
     25% { transform: translate(15px, -12px); }

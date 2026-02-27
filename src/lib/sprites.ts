@@ -2,6 +2,15 @@
  * Sprite mapping for Sprout Lands pixel art assets.
  * Maps habit colors → creature sprite colors,
  * and provides paths for creatures at each evolution stage.
+ *
+ * Native sprite sizes (px):
+ *   egg       = 16×16
+ *   baby      = 16×16
+ *   chicken   = 32×32
+ *   cow_baby  = 32×32
+ *   cow       = 32×32
+ *
+ * These are rendered at much larger display sizes via imageRendering: pixelated.
  */
 
 export type CreatureColor = "default" | "red" | "blue" | "green" | "brown";
@@ -27,15 +36,18 @@ export function getCreatureColor(hexColor: string): CreatureColor {
   return COLOR_MAP[hexColor?.toLowerCase()] || "default";
 }
 
+/** Stage names for display */
+export const STAGE_NAMES = ["Egg", "Hatchling", "Young", "Growing", "Evolved"] as const;
+
 /**
  * Returns the public path to the creature sprite for a given stage and color.
  *
  * Stages:
- *   0 = Egg
- *   1 = Baby chick
- *   2 = Chicken (adult)
- *   3 = Baby cow
- *   4 = Adult cow
+ *   0 = Egg          (16×16 item sprite, single cohesive egg)
+ *   1 = Hatchling    (16×16 baby chick, just hatched)
+ *   2 = Young        (32×32 chicken, recognizable)
+ *   3 = Growing      (32×32 baby cow, larger)
+ *   4 = Evolved      (32×32 adult cow, full size)
  */
 export function getCreatureSprite(stage: number, color: CreatureColor): string {
   const prefixes = ["egg", "baby", "chicken", "cow_baby", "cow"];
@@ -44,16 +56,19 @@ export function getCreatureSprite(stage: number, color: CreatureColor): string {
 }
 
 /**
- * Display size (px) for each creature stage.
- * Scaled up from pixel art originals for clear rendering.
+ * Display size (px) for each creature stage ON THE PLANET.
+ * These are the rendered sizes — large enough to see pixel art clearly.
  */
 export const CREATURE_SIZES: Record<number, number> = {
   0: 48,  // egg
-  1: 48,  // baby chick
-  2: 64,  // chicken
-  3: 72,  // baby cow
-  4: 80,  // adult cow
+  1: 56,  // hatchling
+  2: 64,  // young chicken
+  3: 72,  // growing cow baby
+  4: 80,  // evolved adult cow
 };
+
+/** Detail page hero size — always large for emotional impact */
+export const CREATURE_HERO_SIZE = 140;
 
 /**
  * Shop/world item sprite paths.

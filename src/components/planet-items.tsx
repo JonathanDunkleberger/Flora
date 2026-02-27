@@ -15,37 +15,38 @@ interface PlanetItemProps {
   scale?: number;
 }
 
-// Display sizes for each item type
+// Display sizes for each item type — 60-80% of creature sizes
+// Trees/large: 40-56px, Small decorations: 24-32px
 const ITEM_SIZES: Record<string, { w: number; h: number }> = {
   // Landscape
-  pond: { w: 32, h: 24 },
-  bridge: { w: 48, h: 28 },
-  bench: { w: 32, h: 32 },
-  fence: { w: 16, h: 28 },
-  "stone-path": { w: 24, h: 16 },
-  // Trees
-  sakura: { w: 40, h: 48 },
-  pine: { w: 32, h: 48 },
-  willow: { w: 36, h: 48 },
-  oak: { w: 40, h: 48 },
-  // Flowers
-  tulips: { w: 20, h: 20 },
-  sunflowers: { w: 20, h: 20 },
-  roses: { w: 20, h: 20 },
-  lavender: { w: 20, h: 20 },
-  // Decorations
-  lantern: { w: 24, h: 28 },
-  mushrooms: { w: 20, h: 20 },
-  "rock-garden": { w: 28, h: 20 },
-  birdhouse: { w: 24, h: 28 },
-  // New items
-  well: { w: 28, h: 28 },
-  boat: { w: 36, h: 24 },
-  sign: { w: 24, h: 28 },
-  picnic: { w: 32, h: 32 },
-  bush: { w: 24, h: 24 },
-  stump: { w: 24, h: 20 },
-  butterfly: { w: 16, h: 16 },
+  pond: { w: 40, h: 28 },
+  bridge: { w: 48, h: 32 },
+  bench: { w: 36, h: 36 },
+  fence: { w: 20, h: 36 },
+  "stone-path": { w: 28, h: 20 },
+  // Trees — large decorations
+  sakura: { w: 48, h: 56 },
+  pine: { w: 40, h: 56 },
+  willow: { w: 44, h: 56 },
+  oak: { w: 48, h: 56 },
+  // Flowers — small decorations
+  tulips: { w: 28, h: 28 },
+  sunflowers: { w: 28, h: 28 },
+  roses: { w: 28, h: 28 },
+  lavender: { w: 28, h: 28 },
+  // Decorations — small
+  lantern: { w: 28, h: 36 },
+  mushrooms: { w: 28, h: 28 },
+  "rock-garden": { w: 36, h: 24 },
+  birdhouse: { w: 28, h: 36 },
+  // Extra items
+  well: { w: 36, h: 36 },
+  boat: { w: 44, h: 28 },
+  sign: { w: 28, h: 36 },
+  picnic: { w: 36, h: 36 },
+  bush: { w: 32, h: 32 },
+  stump: { w: 28, h: 24 },
+  butterfly: { w: 20, h: 20 },
 };
 
 export function PlanetItem({ id, x, y, rotation, scale = 1 }: PlanetItemProps) {
@@ -79,6 +80,7 @@ export function PlanetItem({ id, x, y, rotation, scale = 1 }: PlanetItemProps) {
           height={h}
           style={{
             imageRendering: "pixelated",
+            objectFit: "contain",
             display: "block",
           }}
           draggable={false}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Store, Check, Coins } from "lucide-react";
 import { SHOP_CATEGORIES, SHOP_ITEMS } from "@/lib/constants";
+import { getShopSprite } from "@/lib/sprites";
 import type { ThemeColors } from "@/lib/constants";
 import type { ShopCategory } from "@/types";
 
@@ -92,15 +93,31 @@ export function Shop({ coins, ownedItems, onBuy, th }: ShopProps) {
                 transition: "all 0.15s",
               }}
             >
-              {/* SVG preview */}
+              {/* Sprite preview — 64px, pixelated */}
               <div style={{
-                width: 56, height: 56, margin: "0 auto 8px",
+                width: 64, height: 64, margin: "0 auto 8px",
                 background: th.progressBg, borderRadius: 12,
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}>
-                <svg width="44" height="44" viewBox="-15 -20 30 25">
-                  <ItemPreview id={item.id} />
-                </svg>
+                {getShopSprite(item.id) ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={getShopSprite(item.id)!}
+                    alt={item.name}
+                    width={52}
+                    height={52}
+                    draggable={false}
+                    style={{
+                      imageRendering: "pixelated",
+                      objectFit: "contain",
+                      display: "block",
+                    }}
+                  />
+                ) : (
+                  <svg width="44" height="44" viewBox="-15 -20 30 25">
+                    <ItemPreview id={item.id} />
+                  </svg>
+                )}
               </div>
 
               <div style={{ fontWeight: 600, fontSize: 12.5, color: th.text }}>{item.name}</div>

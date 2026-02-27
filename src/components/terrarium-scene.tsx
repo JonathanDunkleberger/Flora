@@ -35,13 +35,22 @@ export function TerrariumScene({
   const progressBonus = pct * 10;
   const pr = baseRadius + habitBonus + progressBonus;
 
-  // Distribute creatures evenly around the top arc of planet
+  // ── CREATURE PLACEMENT: even spread from -80° to +80° (measured from planet top) ──
+  // This distributes creatures across the visible upper hemisphere arc
+  const N = habits.length;
   const creatureAngles = habits.map((_, i) => {
-    const spread = habits.length <= 3 ? 90
-      : habits.length <= 5 ? 150
-      : 200;
-    const start = -90 - spread / 2;
-    return start + (habits.length === 1 ? 0 : i * (spread / (habits.length - 1)));
+    if (N === 1) return -90; // single creature at top
+    // Spread evenly across -80° to +80° from top center (which is -170° to -10° in math coords)
+    const angleDeg = -80 + (160 / (N + 1)) * (i + 1); // degrees from top
+    return -90 + angleDeg; // convert to math angle (top = -90°)
+  });
+
+  // ── DECORATION PLACEMENT: lower hemisphere 20° to 120° from top ──
+  const decorAngles = ownedItems.map((_, i) => {
+    const total = ownedItems.length;
+    if (total === 0) return 0;
+    const angleDeg = 20 + (100 / (total + 1)) * (i + 1); // degrees from top
+    return -90 + angleDeg; // convert to math angle
   });
 
   // Season-based planet colors
@@ -156,32 +165,30 @@ export function TerrariumScene({
 
         {/* ── PLANET BODY ── */}
         <circle cx={cx} cy={cy} r={pr} fill="url(#lp-planet)" />
-        {/* Surface texture patches */}
-        {Array.from({ length: 5 + Math.floor(pct * 4) }).map((_, i) => {
-          const r = sr(i * 53 + 19);
-          const angle = r() * 360 * Math.PI / 180;
-          const dist = r() * pr * 0.65;
-          const px = cx + Math.cos(angle) * dist, py = cy + Math.sin(angle) * dist;
-          return <circle key={`pt${i}`} cx={px} cy={py} r={4 + r() * 8} fill={r() > 0.5 ? pc.base : pc.dark} opacity={0.2 + r() * 0.15} />;
-        })}
 
-        {/* ── SURFACE DETAILS: grass, flowers along top arc ── */}
-        {Array.from({ length: 28 + Math.floor(pct * 24) }).map((_, i) => {
+        {/* Subtle surface texture — 4 darker patches for depth */}
+        <circle cx={cx - pr * 0.25} cy={cy - pr * 0.2} r={pr * 0.25} fill="rgba(0,80,0,0.07)" />
+        <circle cx={cx + pr * 0.3} cy={cy + pr * 0.15} r={pr * 0.2} fill="rgba(0,80,0,0.05)" />
+        <circle cx={cx - pr * 0.1} cy={cy + pr * 0.35} r={pr * 0.18} fill="rgba(0,80,0,0.06)" />
+        <circle cx={cx + pr * 0.15} cy={cy - pr * 0.35} r={pr * 0.15} fill="rgba(0,60,0,0.04)" />
+
+        {/* ── SURFACE DETAILS: reduced — max 8 grass tufts, subtle ── */}
+        {Array.from({ length: Math.min(8, 4 + Math.floor(pct * 4)) }).map((_, i) => {
           const r = sr(i * 47 + 33);
           const angle = (-140 + r() * 280) * Math.PI / 180;
           const sx = cx + Math.cos(angle) * (pr - 1), sy = cy + Math.sin(angle) * (pr - 1);
-          const h = 3 + r() * 6 + pct * 3;
+          const h = 3 + r() * 4 + pct * 2;
           return (
             <line key={`gr${i}`} x1={sx} y1={sy}
               x2={sx + Math.cos(angle - Math.PI / 2 + (r() - 0.5) * 0.3) * h}
               y2={sy + Math.sin(angle - Math.PI / 2 + (r() - 0.5) * 0.3) * h}
               stroke={`hsl(${season === "autumn" ? 40 + r() * 30 : 90 + r() * 40}, ${40 + r() * 25 + pct * 15}%, ${season === "winter" ? 50 + r() * 20 : 28 + r() * 18}%)`}
-              strokeWidth={0.8 + r() * 1} strokeLinecap="round" opacity={0.4 + r() * 0.3 + pct * 0.2} />
+              strokeWidth={0.8 + r() * 0.6} strokeLinecap="round" opacity={0.3 + r() * 0.2 + pct * 0.15} />
           );
         })}
 
-        {/* Flowers on surface */}
-        {Array.from({ length: Math.floor(pct * 16) }).map((_, i) => {
+        {/* Flowers on surface — max 4, subtle */}
+        {Array.from({ length: Math.min(4, Math.floor(pct * 4)) }).map((_, i) => {
           const r = sr(i * 89 + 51);
           const angle = (-120 + r() * 240) * Math.PI / 180;
           const fx = cx + Math.cos(angle) * (pr + 1), fy = cy + Math.sin(angle) * (pr + 1);
@@ -194,83 +201,65 @@ export function TerrariumScene({
           );
         })}
 
-        {/* ── OWNED SHOP ITEMS on planet surface ── */}
+        {/* ── OWNED SHOP ITEMS on planet surface — LOWER hemisphere ── */}
         {ownedItems.map((itemId, i) => {
-          const r = sr(itemId.charCodeAt(0) * 17 + i * 73);
-          const angle = (-140 + r() * 280) * Math.PI / 180;
-          const ix = cx + Math.cos(angle) * (pr + 1);
-          const iy = cy + Math.sin(angle) * (pr + 1);
-          const rotDeg = (angle * 180 / Math.PI) + 90;
+          const angleDeg = decorAngles[i] || 0;
+          const angleRad = angleDeg * Math.PI / 180;
+          const ix = cx + Math.cos(angleRad) * (pr + 1);
+          const iy = cy + Math.sin(angleRad) * (pr + 1);
+          const rotDeg = angleDeg + 90;
           return (
-            <PlanetItem key={itemId} id={itemId} x={ix} y={iy} rotation={rotDeg} scale={0.8} />
+            <PlanetItem key={itemId} id={itemId} x={ix} y={iy} rotation={rotDeg} scale={0.65} />
           );
         })}
 
-        {/* ── TREE (grows with progress) ── */}
-        {pct > 0 && (() => {
-          const treeAngle = -90 * Math.PI / 180;
-          const tx = cx + Math.cos(treeAngle) * pr;
-          const ty = cy + Math.sin(treeAngle) * pr;
-          const treeH = 8 + pct * 22;
-          const canopyR = 5 + pct * 14;
-          return (
-            <g>
-              {/* Trunk */}
-              <rect x={tx - 1.5 - pct} y={ty - treeH} width={3 + pct * 2} height={treeH} rx={1.5} fill="#6B5344" />
-              <rect x={tx - 0.8 - pct * 0.5} y={ty - treeH + 2} width={1.6 + pct} height={treeH - 2} rx={1} fill="#7B6354" opacity="0.6" />
-              {/* Canopy layers */}
-              <ellipse cx={tx} cy={ty - treeH - canopyR * 0.3} rx={canopyR} ry={canopyR * 0.8} fill={pc.mid} />
-              <ellipse cx={tx - canopyR * 0.35} cy={ty - treeH - canopyR * 0.55} rx={canopyR * 0.7} ry={canopyR * 0.6} fill={pc.base} />
-              <ellipse cx={tx + canopyR * 0.3} cy={ty - treeH - canopyR * 0.2} rx={canopyR * 0.6} ry={canopyR * 0.55} fill={pc.mid} opacity="0.8" />
-              {/* Fruit / flowers in tree */}
-              {pct > 0.3 && sn.flowerColors.slice(0, 3).map((fc, fi) => {
-                const r = sr(fi * 41 + 99);
-                const fx = tx + (r() - 0.5) * canopyR * 1.4;
-                const fy = ty - treeH - canopyR * 0.3 + (r() - 0.5) * canopyR * 0.8;
-                return <circle key={`tf${fi}`} cx={fx} cy={fy} r={1.5 + r() * 1.5} fill={fc} opacity={0.6 + r() * 0.3} />;
-              })}
-            </g>
-          );
-        })()}
-
-        {/* ── ATMOSPHERE RIM ── */}
+        {/* ── ATMOSPHERE RIM — subtle edge glow ── */}
         <circle cx={cx} cy={cy} r={pr} fill="url(#lp-atmo)" />
-        <circle cx={cx} cy={cy} r={pr + 1.5} fill="none" stroke={pc.accent} strokeWidth="1" opacity={0.06 + pct * 0.08} />
-        <circle cx={cx} cy={cy} r={pr + 3} fill="none" stroke={pc.accent} strokeWidth="0.5" opacity={0.03 + pct * 0.04} />
+        <circle cx={cx} cy={cy} r={pr + 1} fill="none" stroke="rgba(100,200,100,0.12)" strokeWidth="1.5" />
+        <circle cx={cx} cy={cy} r={pr + 3} fill="none" stroke="rgba(100,200,100,0.06)" strokeWidth="1" />
+        <circle cx={cx} cy={cy} r={pr + 6} fill="none" stroke="rgba(100,200,100,0.03)" strokeWidth="0.5" />
 
         {/* ── CREATURES walking on planet surface ── */}
+        {/* Each creature is ONE sprite, properly sized, with horizontal label */}
         {habits.map((h, i) => {
           const st = getStage(h.id);
           const hp = isHappy(h.id);
           const isBouncing = bouncingId === h.id;
+          const isQuitHabit = h.category === "quit";
           const r = sr(h.id.charCodeAt(0) * 100 + i);
 
-          const angleDeg = creatureAngles[i] || -90;
+          const angleDeg = creatureAngles[i] ?? -90;
           const angleRad = angleDeg * Math.PI / 180;
           const px = cx + Math.cos(angleRad) * (pr + 2);
           const py = cy + Math.sin(angleRad) * (pr + 2);
           const rotDeg = angleDeg + 90;
 
-          // Sprite size based on stage, scaled down if many habits
-          const baseSz = CREATURE_SIZES[st] || 48;
-          const sz = habits.length >= 8 ? Math.max(24, baseSz * 0.6)
-                   : habits.length >= 5 ? Math.max(28, baseSz * 0.75)
-                   : baseSz;
+          // Sprite display size based on stage
+          const sz = CREATURE_SIZES[st] || 48;
+          // Scale down if many habits, but never below 36px
+          const scaledSz = N >= 8 ? Math.max(36, sz * 0.65)
+                         : N >= 6 ? Math.max(40, sz * 0.75)
+                         : N >= 4 ? Math.max(44, sz * 0.85)
+                         : sz;
           const creatureColor = getCreatureColor(h.color);
           const spritePath = getCreatureSprite(st, creatureColor);
 
+          // Animation: bouncing on completion, calm float for quit habits, gentle bob otherwise
+          const anim = isBouncing
+            ? "completionBounce 0.5s cubic-bezier(0.34,1.56,0.64,1)"
+            : isQuitHabit
+              ? `creatureIdleFloat 3s ease-in-out infinite`
+              : `bob ${2.2 + r() * 1.5}s ease-in-out infinite`;
+
           return (
             <g key={h.id} transform={`translate(${px}, ${py}) rotate(${rotDeg})`}>
-              {/* Glow circle underneath */}
-              <circle cx="0" cy={-sz / 2} r={sz * 0.6} fill={h.color} opacity="0.12" />
-              <g style={{
-                animation: isBouncing ? "none" : `bob ${2.2 + r() * 1.5}s ease-in-out infinite`,
-                animationDelay: `${r() * 2}s`,
-              }}>
-                {/* Sprite image via foreignObject */}
+              {/* Soft glow circle underneath creature */}
+              <circle cx="0" cy={0} r={scaledSz * 0.4} fill={h.color} opacity={hp ? 0.18 : 0.08} />
+              <g style={{ animation: anim, animationDelay: `${r() * 2}s` }}>
+                {/* ONE sprite image via foreignObject */}
                 <foreignObject
-                  x={-sz / 2} y={-sz - 2}
-                  width={sz} height={sz}
+                  x={-scaledSz / 2} y={-scaledSz}
+                  width={scaledSz} height={scaledSz}
                   transform={`rotate(${-rotDeg})`}
                   style={{ overflow: "visible" }}
                 >
@@ -278,22 +267,52 @@ export function TerrariumScene({
                   <img
                     src={spritePath}
                     alt={h.name}
-                    width={sz}
-                    height={sz}
+                    width={scaledSz}
+                    height={scaledSz}
                     style={{
                       imageRendering: "pixelated",
                       display: "block",
-                      filter: hp ? "none" : "saturate(0.5) brightness(0.85)",
+                      filter: hp ? "none" : "saturate(0.5) brightness(0.8)",
                       transition: "filter 0.3s",
                     }}
                     draggable={false}
                   />
                 </foreignObject>
-                {/* Name label — horizontal (counter-rotate) */}
-                <text y={sz / 2 + 8} textAnchor="middle" fontSize="8.5" fill="rgba(255,255,255,0.7)" fontWeight="600"
+                {/* Name label — always horizontal (counter-rotate), below sprite */}
+                <foreignObject
+                  x={-40} y={4}
+                  width={80} height={16}
                   transform={`rotate(${-rotDeg})`}
-                  style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>{h.name}</text>
+                  style={{ overflow: "visible" }}
+                >
+                  <div style={{
+                    textAlign: "center",
+                    fontSize: 10,
+                    fontWeight: 600,
+                    color: "rgba(255,255,255,0.85)",
+                    textShadow: "0 1px 3px rgba(0,0,0,0.8)",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    maxWidth: 80,
+                    lineHeight: "14px",
+                    fontFamily: "inherit",
+                  }}>{h.name}</div>
+                </foreignObject>
               </g>
+
+              {/* Sparkle particles on completion bounce */}
+              {isBouncing && [0, 1, 2, 3].map((si) => {
+                const angle = (si * 90 + 45) * Math.PI / 180;
+                const dist = scaledSz * 0.6;
+                return (
+                  <circle key={si} cx={Math.cos(angle) * dist} cy={-scaledSz / 2 + Math.sin(angle) * dist}
+                    r="2" fill="white" opacity="0">
+                    <animate attributeName="opacity" values="0;1;0" dur="0.4s" fill="freeze" />
+                    <animate attributeName="r" values="1;3;1" dur="0.4s" fill="freeze" />
+                  </circle>
+                );
+              })}
             </g>
           );
         })}
