@@ -99,7 +99,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             fontFamily: "'Fraunces',serif", fontSize: 32, fontWeight: 700,
             color: "white", position: "relative", zIndex: 1, marginBottom: 12,
           }}>
-            bloom<span style={{ color: "#4ade80" }}>.</span>
+            tend<span style={{ color: "#4ade80" }}>.</span>
           </h1>
           <p style={{
             fontSize: 15, fontWeight: 400, color: "rgba(255,255,255,0.5)",
@@ -350,7 +350,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                 fontFamily: "inherit", height: 48,
               }}
             >
-              Enter Bloom
+              Enter Tend
             </button>
           </div>
         </div>

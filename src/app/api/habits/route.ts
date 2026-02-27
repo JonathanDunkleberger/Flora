@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       .eq("is_archived", false);
     if ((count || 0) >= FREE_HABIT_LIMIT)
       return NextResponse.json(
-        { error: `Free plan limited to ${FREE_HABIT_LIMIT} habits. Upgrade to Bloom Pro!` },
+        { error: `Free plan limited to ${FREE_HABIT_LIMIT} habits. Upgrade to Tend+!` },
         { status: 403 }
       );
   }

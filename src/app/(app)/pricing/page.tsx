@@ -41,7 +41,7 @@ export default function PricingPage() {
       disabled: true,
     },
     {
-      name: "Bloom Pro",
+      name: "Tend Pro",
       price: annual ? "$39.99" : "$4.99",
       period: annual ? "/year" : "/month",
       savings: annual ? "Save $20/year" : null,
@@ -66,7 +66,7 @@ export default function PricingPage() {
     <div className="max-w-2xl mx-auto px-4 pt-20 pb-24">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold text-slate-800">Grow Without Limits</h1>
-        <p className="text-sm text-slate-500 mt-1">Upgrade to Bloom Pro to unlock your full garden potential.</p>
+        <p className="text-sm text-slate-500 mt-1">Upgrade to Tend Pro to unlock your full garden potential.</p>
       </div>
 
       {/* Toggle */}
@@ -75,7 +75,7 @@ export default function PricingPage() {
         <button
           onClick={() => setAnnual(!annual)}
           className={cn("w-12 h-7 rounded-full p-1 transition-colors",
-            annual ? "bg-bloom-500" : "bg-slate-300"
+            annual ? "bg-green-500" : "bg-slate-300"
           )}
         >
           <div className={cn("w-5 h-5 bg-white rounded-full transition-transform shadow-sm",
@@ -83,7 +83,7 @@ export default function PricingPage() {
           )} />
         </button>
         <span className={cn("text-sm font-medium", annual ? "text-slate-800" : "text-slate-400")}>
-          Annual <span className="text-bloom-600 text-xs font-bold">Save 33%</span>
+          Annual <span className="text-green-600 text-xs font-bold">Save 33%</span>
         </span>
       </div>
 
@@ -92,7 +92,7 @@ export default function PricingPage() {
         {plans.map((plan) => (
           <div key={plan.name}
             className={cn("bg-white rounded-3xl border p-6",
-              plan.isPro ? "border-bloom-300 shadow-lg shadow-bloom-500/10" : "border-slate-200"
+              plan.isPro ? "border-green-300 shadow-lg shadow-green-500/10" : "border-slate-200"
             )}>
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -101,7 +101,7 @@ export default function PricingPage() {
                   <h3 className="font-bold text-lg text-slate-800">{plan.name}</h3>
                 </div>
                 {plan.savings && (
-                  <span className="text-xs text-bloom-600 font-medium">{plan.savings}</span>
+                  <span className="text-xs text-green-600 font-medium">{plan.savings}</span>
                 )}
               </div>
               <div className="text-right">
@@ -113,7 +113,7 @@ export default function PricingPage() {
             <ul className="space-y-2 mb-6">
               {plan.features.map((feature) => (
                 <li key={feature} className="flex items-center gap-2 text-sm text-slate-600">
-                  <Check className={cn("w-4 h-4 shrink-0", plan.isPro ? "text-bloom-500" : "text-slate-400")} />
+                  <Check className={cn("w-4 h-4 shrink-0", plan.isPro ? "text-green-500" : "text-slate-400")} />
                   {feature}
                 </li>
               ))}
@@ -124,7 +124,7 @@ export default function PricingPage() {
               disabled={plan.disabled || loading}
               className={cn("w-full py-3 rounded-2xl font-semibold text-sm transition-colors tap-bounce",
                 plan.isPro
-                  ? "bg-bloom-500 hover:bg-bloom-600 text-white shadow-md shadow-bloom-500/25"
+                  ? "bg-green-500 hover:bg-green-600 text-white shadow-md shadow-green-500/25"
                   : "bg-slate-100 text-slate-400 cursor-not-allowed"
               )}
             >

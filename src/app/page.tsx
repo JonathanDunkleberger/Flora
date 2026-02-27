@@ -12,7 +12,7 @@ export default async function LandingPage() {
       <nav style={{ position: "fixed", top: 0, width: "100%", zIndex: 50, background: "rgba(248,248,246,0.85)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
         <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 20px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ fontFamily: "'Fraunces',serif", fontSize: 20, fontWeight: 500 }}>
-            bloom<span style={{ color: "#4caf50" }}>.</span>
+            tend<span style={{ color: "#4caf50" }}>.</span>
           </span>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <Link href="/sign-in" style={{ fontSize: 13, fontWeight: 600, color: "rgba(0,0,0,0.4)", textDecoration: "none", padding: "6px 12px" }}>
@@ -62,10 +62,10 @@ export default async function LandingPage() {
       {/* Footer */}
       <footer style={{ textAlign: "center", padding: "30px 20px 40px", borderTop: "1px solid rgba(0,0,0,0.04)" }}>
         <span style={{ fontFamily: "'Fraunces',serif", fontSize: 16, fontWeight: 500, color: "rgba(0,0,0,0.15)" }}>
-          bloom<span style={{ color: "#4caf50" }}>.</span>
+          tend<span style={{ color: "#4caf50" }}>.</span>
         </span>
         <p style={{ fontSize: 11, color: "rgba(0,0,0,0.15)", marginTop: 6 }}>
-          © {new Date().getFullYear()} Bloom. Every good day grows your world.
+          © {new Date().getFullYear()} Tend. Every good day grows your world.
         </p>
       </footer>
     </main>

@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { BloomApp } from "@/components/bloom-app";
+import { TendApp } from "@/components/tend-app";
 import { today, daysAgo, getStage } from "@/lib/utils";
 import type { Habit, HabitLog, HabitWithStats, EarnedMilestones } from "@/types";
 
@@ -88,7 +88,7 @@ export default async function GardenPage() {
   });
 
   return (
-    <BloomApp
+    <TendApp
       initialHabits={habitsWithStats}
       initialCoins={profile?.coins ?? 250}
       initialEarned={earned}

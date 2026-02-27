@@ -146,7 +146,7 @@ export const WELCOME_MSGS = [
   { title: "Welcome back!", body: "Your creatures missed you. They've been napping — let's wake them up together.", vibe: "warm" },
   { title: "Hey, you came back!", body: "That's the hard part done. One check-in and your planet starts glowing again.", vibe: "proud" },
   { title: "Fresh start energy", body: "Streaks break. What matters is you're here now. Your creatures are stretching and ready.", vibe: "fresh" },
-  { title: "Look who's back!", body: "Your planet kept spinning while you were away. Time to make it bloom again.", vibe: "playful" },
+  { title: "Look who's back!", body: "Your planet kept spinning while you were away. Time to make it grow again.", vibe: "playful" },
 ] as const;
 
 export const BOUNCE_BACK = [

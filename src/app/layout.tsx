@@ -5,8 +5,8 @@ import "./globals.css";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Bloom — Habit & Recovery Tracker",
-  description: "Quit bad habits. Grow new ones. A beautiful habit tracker with evolving creatures.",
+  title: "Tend — Habit & Recovery Tracker",
+  description: "Quit bad habits. Grow new ones. Tend helps you through recovery with guided breathing, urge support, and creatures that grow with your progress.",
   keywords: ["habit tracker", "self improvement", "habit building", "creature evolution", "quit tracker", "recovery"],
   manifest: "/manifest.json",
   icons: {
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Bloom",
+    title: "Tend",
   },
 };
 

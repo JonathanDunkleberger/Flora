@@ -23,7 +23,7 @@ import { RelapseModal } from "@/components/relapse-modal";
 import { ReasonEditor } from "@/components/reason-editor";
 import { Shop } from "@/components/shop";
 import { UrgeSupport } from "@/components/urge-support";
-import { BloomPlusScreen, BloomPlusMiniPrompt, SevenDayCelebration } from "@/components/bloom-plus-screen";
+import { TendPlusScreen, TendPlusMiniPrompt, SevenDayCelebration } from "@/components/tend-plus-screen";
 import { Onboarding } from "@/components/onboarding";
 import { MultiHabitHeatmap } from "@/components/multi-habit-heatmap";
 import { MilestoneCoin, MilestoneCelebration, CoinBadge, CoinRow, MILESTONE_COINS } from "@/components/milestone-coin";
@@ -39,14 +39,14 @@ import type { HabitWithStats, EarnedMilestones, QuitData } from "@/types";
 import type { LucideIcon } from "lucide-react";
 import type { SeasonKey } from "@/lib/constants";
 
-interface BloomAppProps {
+interface TendAppProps {
   initialHabits: HabitWithStats[];
   initialCoins: number;
   initialEarned: EarnedMilestones;
   initialStreakFreezes: Record<string, number>;
 }
 
-export function BloomApp({ initialHabits, initialCoins, initialEarned, initialStreakFreezes }: BloomAppProps) {
+export function TendApp({ initialHabits, initialCoins, initialEarned, initialStreakFreezes }: TendAppProps) {
   const router = useRouter();
   const [habits, setHabits] = useState<HabitWithStats[]>(initialHabits);
   const [coins, setCoins] = useState(initialCoins);
@@ -88,7 +88,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const terRef = useRef<HTMLDivElement>(null);
 
-  // ── Bloom+ tier state ──
+  // ── Tend+ tier state ──
   const [isPro, setIsPro] = useState(false);
   const [proExpiry, setProExpiry] = useState<string | null>(null);
   const [lastBonusDate, setLastBonusDate] = useState<string | null>(null);
@@ -113,14 +113,14 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   // ── Live timer for quit detail ──
   const [liveNow, setLiveNow] = useState(Date.now());
 
-  const isBloomPlus = useCallback((): boolean => {
+  const isTendPlus = useCallback((): boolean => {
     if (!isPro) return false;
     if (proExpiry && new Date(proExpiry) < new Date()) {
       setIsPro(false);
       setProExpiry(null);
       if (typeof window !== "undefined") {
-        localStorage.removeItem("bloom_pro");
-        localStorage.removeItem("bloom_pro_expiry");
+        localStorage.removeItem("tend_pro");
+        localStorage.removeItem("tend_pro_expiry");
       }
       return false;
     }
@@ -131,14 +131,14 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
     setTimeout(() => setMounted(true), 50);
 
     // Hydrate localStorage-dependent state after mount
-    const savedDark = localStorage.getItem("bloom_dark");
+    const savedDark = localStorage.getItem("tend_dark");
     if (savedDark === "1") setDarkMode(true);
-    const savedSeason = localStorage.getItem("bloom_season") as SeasonKey | null;
+    const savedSeason = localStorage.getItem("tend_season") as SeasonKey | null;
     if (savedSeason && savedSeason in SEASONS) setSeason(savedSeason);
 
     // Welcome back detection
     if (typeof window !== "undefined") {
-      const lastVisit = localStorage.getItem("bloom_last_visit");
+      const lastVisit = localStorage.getItem("tend_last_visit");
       const now = today();
       if (lastVisit && lastVisit !== now) {
         const diff = Math.round((new Date(now + "T12:00:00").getTime() - new Date(lastVisit + "T12:00:00").getTime()) / 86400000);
@@ -148,42 +148,42 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
           setBounceBackDay(1);
         }
       }
-      localStorage.setItem("bloom_last_visit", now);
+      localStorage.setItem("tend_last_visit", now);
 
       // Load quit data
       try {
-        const raw = localStorage.getItem("bloom_quit_data");
+        const raw = localStorage.getItem("tend_quit_data");
         if (raw) setQuitDataMap(JSON.parse(raw));
       } catch { /* ignore */ }
 
       // Load owned shop items
       try {
-        const rawItems = localStorage.getItem("bloom_owned_items");
+        const rawItems = localStorage.getItem("tend_owned_items");
         if (rawItems) setOwnedItems(JSON.parse(rawItems));
       } catch { /* ignore */ }
 
       // Load paused habits
       try {
-        const rawPaused = localStorage.getItem("bloom_paused_habits");
+        const rawPaused = localStorage.getItem("tend_paused_habits");
         if (rawPaused) setPausedHabits(JSON.parse(rawPaused));
       } catch { /* ignore */ }
 
       // Load earned milestone coins
       try {
-        const rawMC = localStorage.getItem("bloom_milestone_coins");
+        const rawMC = localStorage.getItem("tend_milestone_coins");
         if (rawMC) setEarnedMilestoneCoins(JSON.parse(rawMC));
       } catch { /* ignore */ }
 
-      // Load Bloom+ state
-      const savedPro = localStorage.getItem("bloom_pro");
+      // Load Tend+ state
+      const savedPro = localStorage.getItem("tend_pro");
       if (savedPro === "1") setIsPro(true);
-      const savedExpiry = localStorage.getItem("bloom_pro_expiry");
+      const savedExpiry = localStorage.getItem("tend_pro_expiry");
       if (savedExpiry) setProExpiry(savedExpiry);
-      const savedBonus = localStorage.getItem("bloom_last_bonus");
+      const savedBonus = localStorage.getItem("tend_last_bonus");
       if (savedBonus) setLastBonusDate(savedBonus);
 
       // Check onboarding
-      const onboardingDone = localStorage.getItem("bloom_onboarding_complete");
+      const onboardingDone = localStorage.getItem("tend_onboarding_complete");
       if (!onboardingDone && initialHabits.length === 0) {
         setShowOnboarding(true);
       }
@@ -202,9 +202,9 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   useEffect(() => {
     if (typeof window !== "undefined" && Object.keys(quitDataMap).length > 0) {
       const data = JSON.stringify(quitDataMap);
-      localStorage.setItem("bloom_quit_data", data);
+      localStorage.setItem("tend_quit_data", data);
       if (process.env.NODE_ENV === "development") {
-        const readBack = localStorage.getItem("bloom_quit_data");
+        const readBack = localStorage.getItem("tend_quit_data");
         if (!readBack) console.error("SAVE FAILED: quit data not persisted");
       }
     }
@@ -214,9 +214,9 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   useEffect(() => {
     if (typeof window !== "undefined" && ownedItems.length > 0) {
       const data = JSON.stringify(ownedItems);
-      localStorage.setItem("bloom_owned_items", data);
+      localStorage.setItem("tend_owned_items", data);
       if (process.env.NODE_ENV === "development") {
-        const readBack = localStorage.getItem("bloom_owned_items");
+        const readBack = localStorage.getItem("tend_owned_items");
         if (!readBack) console.error("SAVE FAILED: owned items not persisted");
       }
     }
@@ -225,43 +225,43 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   // Persist paused habits
   useEffect(() => {
     if (typeof window !== "undefined" && Object.keys(pausedHabits).length > 0) {
-      localStorage.setItem("bloom_paused_habits", JSON.stringify(pausedHabits));
+      localStorage.setItem("tend_paused_habits", JSON.stringify(pausedHabits));
     }
   }, [pausedHabits]);
 
   // Persist milestone coins
   useEffect(() => {
     if (typeof window !== "undefined" && Object.keys(earnedMilestoneCoins).length > 0) {
-      localStorage.setItem("bloom_milestone_coins", JSON.stringify(earnedMilestoneCoins));
+      localStorage.setItem("tend_milestone_coins", JSON.stringify(earnedMilestoneCoins));
     }
   }, [earnedMilestoneCoins]);
 
   // Persist dark mode & season
   useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("bloom_dark", darkMode ? "1" : "0");
+    if (typeof window !== "undefined") localStorage.setItem("tend_dark", darkMode ? "1" : "0");
   }, [darkMode]);
   useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("bloom_season", season);
+    if (typeof window !== "undefined") localStorage.setItem("tend_season", season);
   }, [season]);
 
-  // Persist Bloom+ state
+  // Persist Tend+ state
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("bloom_pro", isPro ? "1" : "0");
-      if (proExpiry) localStorage.setItem("bloom_pro_expiry", proExpiry);
-      else localStorage.removeItem("bloom_pro_expiry");
+      localStorage.setItem("tend_pro", isPro ? "1" : "0");
+      if (proExpiry) localStorage.setItem("tend_pro_expiry", proExpiry);
+      else localStorage.removeItem("tend_pro_expiry");
     }
   }, [isPro, proExpiry]);
 
-  // Daily bonus coins for Bloom+ users
+  // Daily bonus coins for Tend+ users
   useEffect(() => {
     if (!mounted) return;
     const todayVal = today();
-    if (isBloomPlus() && lastBonusDate !== todayVal) {
+    if (isTendPlus() && lastBonusDate !== todayVal) {
       setCoins((c) => c + 5);
       setLastBonusDate(todayVal);
-      localStorage.setItem("bloom_last_bonus", todayVal);
-      setCoinToast({ msg: "+5 daily Bloom+ coins", icon: Coins });
+      localStorage.setItem("tend_last_bonus", todayVal);
+      setCoinToast({ msg: "+5 daily Tend+ coins", icon: Coins });
       fetch("/api/coins", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ coins: coins + 5 }) }).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -278,7 +278,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
       const newPro = !isPro;
       setIsPro(newPro);
       setProExpiry(newPro ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : null);
-      setCoinToast({ msg: newPro ? "Bloom+ enabled (dev)" : "Bloom+ disabled (dev)", icon: Sparkles });
+      setCoinToast({ msg: newPro ? "Tend+ enabled (dev)" : "Tend+ disabled (dev)", icon: Sparkles });
     }
   }, [isPro]);
 
@@ -567,7 +567,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   // First-day celebration toasts for quit habits (24h, 72h, 7d)
   useEffect(() => {
     if (!mounted) return;
-    const fired = JSON.parse(localStorage.getItem("bloom_quit_celebrations") || "{}") as Record<string, number[]>;
+    const fired = JSON.parse(localStorage.getItem("tend_quit_celebrations") || "{}") as Record<string, number[]>;
     let changed = false;
     habits.filter((h) => h.category === "quit").forEach((h) => {
       const cd = getCleanDays(h.id);
@@ -591,16 +591,16 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
       }
       fired[h.id] = prev;
     });
-    if (changed) localStorage.setItem("bloom_quit_celebrations", JSON.stringify(fired));
+    if (changed) localStorage.setItem("tend_quit_celebrations", JSON.stringify(fired));
 
-    // 7-day Bloom+ nudge — show SevenDayCelebration once per quit habit
-    if (!isBloomPlus()) {
-      const shown7 = JSON.parse(localStorage.getItem("bloom_7day_shown") || "{}") as Record<string, boolean>;
+    // 7-day Tend+ nudge — show SevenDayCelebration once per quit habit
+    if (!isTendPlus()) {
+      const shown7 = JSON.parse(localStorage.getItem("tend_7day_shown") || "{}") as Record<string, boolean>;
       for (const h of habits.filter((h) => h.category === "quit")) {
         const cd = getCleanDays(h.id);
         if (cd >= 7 && !shown7[h.id]) {
           shown7[h.id] = true;
-          localStorage.setItem("bloom_7day_shown", JSON.stringify(shown7));
+          localStorage.setItem("tend_7day_shown", JSON.stringify(shown7));
           const qd = quitDataMap[h.id];
           const cost = qd?.dailyCost ?? 0;
           const urgeCount = (qd?.urges ?? []).length;
@@ -853,7 +853,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
     }
 
     // Mark onboarding complete
-    localStorage.setItem("bloom_onboarding_complete", "1");
+    localStorage.setItem("tend_onboarding_complete", "1");
     setShowOnboarding(false);
   };
 
@@ -943,24 +943,24 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
         />
       )}
 
-      {/* Bloom+ paywall screen */}
+      {/* Tend+ paywall screen */}
       {showPaywall && (
-        <BloomPlusScreen
+        <TendPlusScreen
           onClose={() => setShowPaywall(false)}
           onSubscribe={(plan) => {
-            // For now (dev/testing), just enable Bloom+
+            // For now (dev/testing), just enable Tend+
             setIsPro(true);
             setProExpiry(new Date(Date.now() + (plan === "annual" ? 365 : 30) * 24 * 60 * 60 * 1000).toISOString());
             setShowPaywall(false);
-            setCoinToast({ msg: "Welcome to Bloom+!", icon: Sparkles });
+            setCoinToast({ msg: "Welcome to Tend+!", icon: Sparkles });
           }}
         />
       )}
 
       {/* Premium shop item mini-prompt */}
       {showPremiumPrompt && (
-        <BloomPlusMiniPrompt
-          onSeeBloomPlus={() => { setShowPremiumPrompt(false); setShowPaywall(true); }}
+        <TendPlusMiniPrompt
+          onSeeTendPlus={() => { setShowPremiumPrompt(false); setShowPaywall(true); }}
           onDismiss={() => setShowPremiumPrompt(false)}
         />
       )}
@@ -971,7 +971,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
           habitName={sevenDayCelebration.habitName}
           moneySaved={sevenDayCelebration.moneySaved}
           urgeCount={sevenDayCelebration.urgeCount}
-          onTryBloomPlus={() => { setSevenDayCelebration(null); setShowPaywall(true); }}
+          onTryTendPlus={() => { setSevenDayCelebration(null); setShowPaywall(true); }}
           onKeepGoingFree={() => setSevenDayCelebration(null)}
         />
       )}
@@ -1005,8 +1005,8 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
               onClick={onLogoTap}
               style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 700, letterSpacing: "-0.5px", color: th.text, cursor: "default", userSelect: "none" }}
             >
-              bloom<span style={{ color: "#4caf50" }}>.</span>
-              {isBloomPlus() && <span style={{ fontSize: 10, fontWeight: 700, color: "#4ade80", marginLeft: 3, verticalAlign: "super" }}>+</span>}
+              tend<span style={{ color: "#4caf50" }}>.</span>
+              {isTendPlus() && <span style={{ fontSize: 10, fontWeight: 700, color: "#4ade80", marginLeft: 3, verticalAlign: "super" }}>+</span>}
             </h1>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -1078,7 +1078,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
               {[
                 { label: "Collection", Icon: LayoutGrid, color: th.textSub, action: () => { setPage("gallery"); setMenuOpen(false); } },
                 { label: "Insights", Icon: Sparkles, color: "#8B5CF6", action: () => { setPage("constellation"); setMenuOpen(false); } },
-                { label: "Bloom Together", Icon: Users, color: "#4caf50", action: () => { setPage("social"); setMenuOpen(false); } },
+                { label: "Tend Together", Icon: Users, color: "#4caf50", action: () => { setPage("social"); setMenuOpen(false); } },
                 { label: "World Shop", Icon: Store, color: "#f59e0b", action: () => { setPage("shop"); setMenuOpen(false); } },
                 { label: darkMode ? "Light Mode" : "Dark Mode", Icon: darkMode ? Sun : Moon, color: th.textSub, action: () => { setDarkMode((d) => !d); setMenuOpen(false); } },
               ].map((item, i) => (
@@ -1255,7 +1255,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
               const nudge = hr >= 5 && hr < 12
                 ? { Icon: Sunrise, msg: "Good morning! A small step forward today?" }
                 : hr >= 12 && hr < 17
-                  ? { Icon: SunMedium, msg: "Afternoon check-in — any habits to bloom?" }
+                  ? { Icon: SunMedium, msg: "Afternoon check-in — any habits to tend?" }
                   : hr >= 17 && hr < 21
                     ? { Icon: MoonStar, msg: "Evening wind-down — still time to grow today" }
                     : { Icon: MoonStar, msg: "Late night. Be gentle with yourself." };
@@ -1559,7 +1559,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                     {HABIT_COLORS.map((c) => (
                       <div key={c} className={`ct ${editColor === c ? "sl" : ""}`} style={{ background: c }} onClick={() => setEditColor(c)} />
                     ))}
-                    {isBloomPlus() ? (
+                    {isTendPlus() ? (
                       <label style={{ position: "relative", cursor: "pointer" }}>
                         <div className={`ct ${!HABIT_COLORS.includes(editColor) ? "sl" : ""}`} style={{
                           background: HABIT_COLORS.includes(editColor) ? "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)" : editColor,
@@ -1572,7 +1572,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                       <div
                         onClick={() => setShowPaywall(true)}
                         className="ct"
-                        title="Custom colors with Bloom+"
+                        title="Custom colors with Tend+"
                         style={{ background: "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)", opacity: 0.4, cursor: "pointer", position: "relative" }}
                       >
                         <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "white", fontWeight: 700, textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}>+</span>
@@ -1939,7 +1939,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
             {habits.length > 0 && (
               <MultiHabitHeatmap habits={habits} isDone={isComplete} getCleanDays={getCleanDays} th={th} />
             )}
-            <Constellation habits={habits} isDone={isComplete} getStreak={getStreak} getTotal={getTotal} getCleanDays={getCleanDays} th={th} isPro={isBloomPlus()} onUpgrade={() => setShowPaywall(true)} />
+            <Constellation habits={habits} isDone={isComplete} getStreak={getStreak} getTotal={getTotal} getCleanDays={getCleanDays} th={th} isPro={isTendPlus()} onUpgrade={() => setShowPaywall(true)} />
           </div>
         )}
 
@@ -1947,7 +1947,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
         {page === "social" && (
           <div style={{ animation: "fadeUp 0.28s ease", textAlign: "center", padding: "60px 20px" }}>
             <Users size={32} color="#4caf50" style={{ marginBottom: 12, opacity: 0.5 }} />
-            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 700, color: th.text, marginBottom: 6 }}>Bloom Together</h2>
+            <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 700, color: th.text, marginBottom: 6 }}>Tend Together</h2>
             <p style={{ fontSize: 13, color: th.textSub }}>Coming Soon</p>
           </div>
         )}
@@ -1955,7 +1955,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
         {/* ═══ SHOP ═══ */}
         {page === "shop" && (
           <Shop coins={coins} ownedItems={ownedItems} onBuy={buyItem} th={th}
-            isPro={isBloomPlus()}
+            isPro={isTendPlus()}
             onPremiumTap={() => setShowPremiumPrompt(true)}
             onOwnedTap={() => { setPage("main"); setTimeout(() => terRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100); }}
           />
@@ -1966,7 +1966,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
       {page === "main" && (
         <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 50 }}>
           <button className="fab" onClick={() => {
-            if (habits.length >= FREE_HABIT_LIMIT && !isBloomPlus()) {
+            if (habits.length >= FREE_HABIT_LIMIT && !isTendPlus()) {
               setShowPaywall(true);
               return;
             }
@@ -2049,7 +2049,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 {HABIT_COLORS.map((c) => (
                   <div key={c} className={`ct ${cColor === c ? "sl" : ""}`} style={{ background: c }} onClick={() => setCColor(c)} />
                 ))}
-                {isBloomPlus() ? (
+                {isTendPlus() ? (
                   <label style={{ position: "relative", cursor: "pointer" }}>
                     <div className={`ct ${!HABIT_COLORS.includes(cColor) ? "sl" : ""}`} style={{
                       background: HABIT_COLORS.includes(cColor) ? "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)" : cColor,
@@ -2062,7 +2062,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                   <div
                     onClick={() => setShowPaywall(true)}
                     className="ct"
-                    title="Custom colors with Bloom+"
+                    title="Custom colors with Tend+"
                     style={{ background: "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)", opacity: 0.4, cursor: "pointer", position: "relative" }}
                   >
                     <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "white", fontWeight: 700, textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}>+</span>

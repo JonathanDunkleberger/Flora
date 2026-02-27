@@ -25,7 +25,7 @@ export default async function SettingsPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <Crown size={18} color={isPro ? "#f59e0b" : "rgba(0,0,0,0.15)"} />
-            <span style={{ fontSize: 14, fontWeight: 600 }}>{isPro ? "Bloom Pro" : "Free Plan"}</span>
+            <span style={{ fontSize: 14, fontWeight: 600 }}>{isPro ? "Tend Pro" : "Free Plan"}</span>
           </div>
           {isPro ? (
             <SettingsClient />

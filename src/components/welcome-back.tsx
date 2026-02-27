@@ -34,7 +34,7 @@ export function WelcomeBack({ daysAway, onClose, th }: WelcomeBackProps) {
           background: "linear-gradient(135deg,#4caf50,#2e7d32)", color: "white", fontSize: 14, fontWeight: 600,
           cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 16px rgba(76,175,80,0.25)",
         }}>
-          Let&apos;s bloom <ArrowRight size={14} style={{ verticalAlign: "middle", marginLeft: 4 }} />
+          Let&apos;s grow <ArrowRight size={14} style={{ verticalAlign: "middle", marginLeft: 4 }} />
         </button>
         <div style={{ marginTop: 12, fontSize: 10, color: th.textFaint }}>
           <RefreshCw size={10} style={{ verticalAlign: "middle", marginRight: 3 }} />

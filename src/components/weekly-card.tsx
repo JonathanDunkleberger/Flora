@@ -53,7 +53,7 @@ export function WeeklyCard({ habits, isDone, getStreak, getTotal, getStage, toda
           <div style={{ position: "relative", zIndex: 1 }}>
             <div style={{ textAlign: "center", marginBottom: 16 }}>
               <h3 style={{ fontFamily: "'Fraunces',serif", fontSize: 18, color: "white", fontWeight: 500 }}>
-                bloom<span style={{ color: "#4caf50" }}>.</span>{" "}
+                tend<span style={{ color: "#4caf50" }}>.</span>{" "}
                 <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>this week</span>
               </h3>
             </div>
@@ -100,7 +100,7 @@ export function WeeklyCard({ habits, isDone, getStreak, getTotal, getStage, toda
               </div>
             )}
 
-            <div style={{ textAlign: "center", fontSize: 9, color: "rgba(255,255,255,0.15)", marginTop: 8 }}>bloom. — grow your habits, grow your world</div>
+            <div style={{ textAlign: "center", fontSize: 9, color: "rgba(255,255,255,0.15)", marginTop: 8 }}>tend. — quit bad habits. grow new ones</div>
           </div>
         </div>
 

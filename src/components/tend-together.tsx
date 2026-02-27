@@ -5,23 +5,23 @@ import { Copy, Users, Share2, Sprout, Flame } from "lucide-react";
 import type { ThemeColors } from "@/lib/constants";
 import type { HabitWithStats } from "@/types";
 
-interface BloomTogetherProps {
+interface TendTogetherProps {
   habits: HabitWithStats[];
   getStage: (id: string) => number;
   isHappy: (id: string) => boolean;
   getStreak: (id: string) => number;
   getTotal: (id: string) => number;
-  bloomCode: string;
+  tendCode: string;
   friends: { name: string; streak: number; lastActive: string }[];
   onInvite: () => void;
   th: ThemeColors;
 }
 
-export function BloomTogether({ habits, getStage, isHappy, getStreak, getTotal, bloomCode, friends, onInvite, th }: BloomTogetherProps) {
+export function TendTogether({ habits, getStage, isHappy, getStreak, getTotal, tendCode, friends, onInvite, th }: TendTogetherProps) {
   const [copied, setCopied] = useState(false);
 
   const copyCode = () => {
-    navigator.clipboard.writeText(bloomCode);
+    navigator.clipboard.writeText(tendCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -35,7 +35,7 @@ export function BloomTogether({ habits, getStage, isHappy, getStreak, getTotal, 
         }}>
           <Users size={24} color="white" />
         </div>
-        <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 22, color: th.text, fontWeight: 500, marginBottom: 4 }}>Bloom Together</h2>
+        <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 22, color: th.text, fontWeight: 500, marginBottom: 4 }}>Tend Together</h2>
         <p style={{ fontSize: 12, color: th.textSub, lineHeight: 1.5 }}>Share your planet code with friends to connect your gardens</p>
         <div style={{
           display: "inline-block", marginTop: 8, padding: "4px 12px", borderRadius: 20,
@@ -55,7 +55,7 @@ export function BloomTogether({ habits, getStage, isHappy, getStreak, getTotal, 
         <div style={{
           background: th.bg, borderRadius: 12, padding: "12px 16px", fontSize: 20, fontWeight: 700,
           letterSpacing: "3px", color: th.text, fontFamily: "monospace", marginBottom: 12,
-        }}>{bloomCode}</div>
+        }}>{tendCode}</div>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={copyCode} style={{
             flex: 1, padding: "10px", borderRadius: 12, border: `1px solid ${th.cardBorder}`, background: th.bg,
@@ -107,7 +107,7 @@ export function BloomTogether({ habits, getStage, isHappy, getStreak, getTotal, 
           { n: "1", t: "Share your planet code", d: "Give friends your unique code" },
           { n: "2", t: "They add your code", d: "Connect your gardens together" },
           { n: "3", t: "Grow together", d: "See each other's streaks & progress" },
-          { n: "4", t: "Bloom together", d: "Unlock shared garden features" },
+          { n: "4", t: "Tend together", d: "Unlock shared garden features" },
         ].map((s, i) => (
           <div key={i} style={{ display: "flex", gap: 10, marginBottom: i < 3 ? 10 : 0, alignItems: "flex-start" }}>
             <div style={{

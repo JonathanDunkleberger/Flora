@@ -2,12 +2,12 @@
 
 import { X, Infinity, Coins, TrendingUp, TreePine, Palette, Sparkles } from "lucide-react";
 
-interface BloomPlusScreenProps {
+interface TendPlusScreenProps {
   onClose: () => void;
   onSubscribe: (plan: "annual" | "monthly") => void;
 }
 
-export function BloomPlusScreen({ onClose, onSubscribe }: BloomPlusScreenProps) {
+export function TendPlusScreen({ onClose, onSubscribe }: TendPlusScreenProps) {
   const features = [
     {
       Icon: Infinity,
@@ -80,7 +80,7 @@ export function BloomPlusScreen({ onClose, onSubscribe }: BloomPlusScreenProps) 
           color: "white", textAlign: "center", lineHeight: 1.3, marginBottom: 32,
         }}>
           You&rsquo;ve been showing up.<br />
-          <span style={{ color: "#4ade80" }}>Bloom+</span> helps you keep going.
+          <span style={{ color: "#4ade80" }}>Tend+</span> helps you keep going.
         </h1>
 
         {/* Feature cards */}
@@ -128,7 +128,7 @@ export function BloomPlusScreen({ onClose, onSubscribe }: BloomPlusScreenProps) 
             onMouseDown={(e) => (e.currentTarget.style.transform = "scale(0.97)")}
             onMouseUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
           >
-            Start Bloom+
+            Start Tend+
           </button>
         </div>
 
@@ -151,7 +151,7 @@ export function BloomPlusScreen({ onClose, onSubscribe }: BloomPlusScreenProps) 
           fontSize: 12, color: "rgba(255,255,255,0.3)",
           textAlign: "center", lineHeight: 1.5, marginBottom: 12,
         }}>
-          Bloom+ supports continued development of free<br />
+          Tend+ supports continued development of free<br />
           recovery tools for everyone.
         </p>
 
@@ -174,11 +174,11 @@ export function BloomPlusScreen({ onClose, onSubscribe }: BloomPlusScreenProps) 
 }
 
 /** Mini prompt for premium shop items — bottom sheet style */
-export function BloomPlusMiniPrompt({
-  onSeeBloomPlus,
+export function TendPlusMiniPrompt({
+  onSeeTendPlus,
   onDismiss,
 }: {
-  onSeeBloomPlus: () => void;
+  onSeeTendPlus: () => void;
   onDismiss: () => void;
 }) {
   return (
@@ -201,7 +201,7 @@ export function BloomPlusMiniPrompt({
       >
         <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.1)", margin: "0 auto 16px" }} />
         <p style={{ fontSize: 15, fontWeight: 600, color: "white", textAlign: "center", marginBottom: 8 }}>
-          This item is part of Bloom+.
+          This item is part of Tend+.
         </p>
         <p style={{
           fontSize: 13, color: "rgba(255,255,255,0.5)",
@@ -212,7 +212,7 @@ export function BloomPlusMiniPrompt({
         </p>
         <div style={{ display: "flex", gap: 10 }}>
           <button
-            onClick={onSeeBloomPlus}
+            onClick={onSeeTendPlus}
             style={{
               flex: 1, padding: "12px 0", borderRadius: 12,
               border: "none", background: "#4ade80", color: "white",
@@ -220,7 +220,7 @@ export function BloomPlusMiniPrompt({
               fontFamily: "inherit",
             }}
           >
-            See Bloom+
+            See Tend+
           </button>
           <button
             onClick={onDismiss}
@@ -240,18 +240,18 @@ export function BloomPlusMiniPrompt({
   );
 }
 
-/** 7-day milestone celebration with gentle Bloom+ nudge */
+/** 7-day milestone celebration with gentle Tend+ nudge */
 export function SevenDayCelebration({
   habitName,
   moneySaved,
   urgeCount,
-  onTryBloomPlus,
+  onTryTendPlus,
   onKeepGoingFree,
 }: {
   habitName: string;
   moneySaved: number;
   urgeCount: number;
-  onTryBloomPlus: () => void;
+  onTryTendPlus: () => void;
   onKeepGoingFree: () => void;
 }) {
   return (
@@ -294,19 +294,19 @@ export function SevenDayCelebration({
           </p>
         )}
         <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.5, marginBottom: 24 }}>
-          Want to go deeper? <span style={{ color: "#4ade80" }}>Bloom+</span> gives you unlimited
+          Want to go deeper? <span style={{ color: "#4ade80" }}>Tend+</span> gives you unlimited
           habits, premium decorations, and full insights into your patterns.
         </p>
         <div style={{ display: "flex", gap: 10 }}>
           <button
-            onClick={onTryBloomPlus}
+            onClick={onTryTendPlus}
             style={{
               flex: 1, padding: "12px 0", borderRadius: 12,
               border: "none", background: "#4ade80", color: "white",
               fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
             }}
           >
-            Try Bloom+
+            Try Tend+
           </button>
           <button
             onClick={onKeepGoingFree}

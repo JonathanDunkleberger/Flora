@@ -1,6 +1,6 @@
 {
-  "name": "Bloom — Habit & Recovery Tracker",
-  "short_name": "Bloom",
+  "name": "Tend — Habit & Recovery Tracker",
+  "short_name": "Tend",
   "description": "Quit bad habits. Grow new ones.",
   "start_url": "/",
   "display": "standalone",

@@ -158,7 +158,7 @@ export function Constellation({ habits, isDone, getStreak, getTotal, getCleanDay
         </div>
       </div>
 
-      {/* ── 2. Habit synergies (constellation visual) — visual for all, details Bloom+ ── */}
+      {/* ── 2. Habit synergies (constellation visual) — visual for all, details Tend+ ── */}
       {buildHabits.length >= 2 && (
         <div className="cd" style={{ overflow: "hidden", marginBottom: 10, background: th.card, borderColor: th.cardBorder, boxShadow: th.cardShadow }}>
           <div style={{ padding: "12px 14px 0" }}>
@@ -227,13 +227,13 @@ export function Constellation({ habits, isDone, getStreak, getTotal, getCleanDay
           )}
           {!isPro && (
             <div style={{ padding: "6px 14px 12px", fontSize: 11, color: th.textMuted, textAlign: "center" }}>
-              Upgrade to Bloom+ for synergy details
+              Upgrade to Tend+ for synergy details
             </div>
           )}
         </div>
       )}
 
-      {/* ── 3. Streak insights — Bloom+ only ── */}
+      {/* ── 3. Streak insights — Tend+ only ── */}
       {isPro && (
       <div className="cd" style={{ padding: 14, marginBottom: 10, background: th.card, borderColor: th.cardBorder, boxShadow: th.cardShadow }}>
         <div className="lb" style={{ marginBottom: 10, color: th.label, display: "flex", alignItems: "center", gap: 4 }}>
@@ -323,7 +323,7 @@ export function Constellation({ habits, isDone, getStreak, getTotal, getCleanDay
               cursor: "pointer",
             }}
           >
-            Unlock with Bloom+
+            Unlock with Tend+
           </button>
         </div>
       )}

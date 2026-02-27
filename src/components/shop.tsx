@@ -97,7 +97,7 @@ export function Shop({ coins, ownedItems, onBuy, onOwnedTap, isPro, onPremiumTap
                 transition: "all 0.15s",
               }}
             >
-              {/* Bloom+ badge for premium items */}
+              {/* Tend+ badge for premium items */}
               {locked && (
                 <div style={{
                   position: "absolute", top: 8, right: 8,
@@ -107,7 +107,7 @@ export function Shop({ coins, ownedItems, onBuy, onOwnedTap, isPro, onPremiumTap
                   fontSize: 9, fontWeight: 700, color: "#4ade80",
                   letterSpacing: "0.3px",
                 }}>
-                  Bloom+
+                  Tend+
                 </div>
               )}
               {/* Sprite preview — 64px, pixelated */}
