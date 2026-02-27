@@ -6,28 +6,17 @@
     </linearGradient>
   </defs>
   <rect width="512" height="512" rx="114" fill="url(#bg)"/>
-  <!-- Subtle grid texture -->
   <g opacity="0.04">
-    <circle cx="100" cy="100" r="1.5" fill="white"/>
-    <circle cx="200" cy="100" r="1.5" fill="white"/>
-    <circle cx="300" cy="100" r="1.5" fill="white"/>
-    <circle cx="400" cy="100" r="1.5" fill="white"/>
-    <circle cx="100" cy="200" r="1.5" fill="white"/>
-    <circle cx="200" cy="200" r="1.5" fill="white"/>
-    <circle cx="300" cy="200" r="1.5" fill="white"/>
-    <circle cx="400" cy="200" r="1.5" fill="white"/>
-    <circle cx="100" cy="300" r="1.5" fill="white"/>
-    <circle cx="200" cy="300" r="1.5" fill="white"/>
-    <circle cx="300" cy="300" r="1.5" fill="white"/>
-    <circle cx="400" cy="300" r="1.5" fill="white"/>
-    <circle cx="100" cy="400" r="1.5" fill="white"/>
-    <circle cx="200" cy="400" r="1.5" fill="white"/>
-    <circle cx="300" cy="400" r="1.5" fill="white"/>
-    <circle cx="400" cy="400" r="1.5" fill="white"/>
+    <circle cx="100" cy="100" r="1.5" fill="white"/><circle cx="200" cy="100" r="1.5" fill="white"/>
+    <circle cx="300" cy="100" r="1.5" fill="white"/><circle cx="400" cy="100" r="1.5" fill="white"/>
+    <circle cx="100" cy="200" r="1.5" fill="white"/><circle cx="200" cy="200" r="1.5" fill="white"/>
+    <circle cx="300" cy="200" r="1.5" fill="white"/><circle cx="400" cy="200" r="1.5" fill="white"/>
+    <circle cx="100" cy="300" r="1.5" fill="white"/><circle cx="200" cy="300" r="1.5" fill="white"/>
+    <circle cx="300" cy="300" r="1.5" fill="white"/><circle cx="400" cy="300" r="1.5" fill="white"/>
+    <circle cx="100" cy="400" r="1.5" fill="white"/><circle cx="200" cy="400" r="1.5" fill="white"/>
+    <circle cx="300" cy="400" r="1.5" fill="white"/><circle cx="400" cy="400" r="1.5" fill="white"/>
   </g>
-  <!-- "b" letterform -->
-  <text x="118" y="375" font-family="Georgia, 'Times New Roman', serif" font-size="340" font-weight="700" fill="#e8e6f0">b</text>
-  <!-- Green dot with leaf -->
-  <circle cx="368" cy="328" r="24" fill="#4ade80"/>
-  <ellipse cx="372" cy="320" rx="10" ry="5" fill="#6ee7a0" transform="rotate(-30, 372, 320)"/>
+  <text x="132" y="375" font-family="Georgia, 'Times New Roman', serif" font-size="340" font-weight="700" fill="#e8e6f0">t</text>
+  <circle cx="352" cy="328" r="24" fill="#4ade80"/>
+  <ellipse cx="356" cy="320" rx="10" ry="5" fill="#6ee7a0" transform="rotate(-30, 356, 320)"/>
 </svg>

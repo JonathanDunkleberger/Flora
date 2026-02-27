@@ -158,8 +158,8 @@ export function Constellation({ habits, isDone, getStreak, getTotal, getCleanDay
         </div>
       </div>
 
-      {/* ── 2. Habit synergies (constellation visual) — Bloom+ only ── */}
-      {isPro && buildHabits.length >= 2 && (
+      {/* ── 2. Habit synergies (constellation visual) — visual for all, details Bloom+ ── */}
+      {buildHabits.length >= 2 && (
         <div className="cd" style={{ overflow: "hidden", marginBottom: 10, background: th.card, borderColor: th.cardBorder, boxShadow: th.cardShadow }}>
           <div style={{ padding: "12px 14px 0" }}>
             <div className="lb" style={{ color: th.label, display: "flex", alignItems: "center", gap: 4 }}>
@@ -209,7 +209,7 @@ export function Constellation({ habits, isDone, getStreak, getTotal, getCleanDay
               );
             })}
           </svg>
-          {synergies.length > 0 && (
+          {isPro && synergies.length > 0 && (
             <div style={{ padding: "0 14px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
               {[...synergies].sort((a, b) => b.strength - a.strength).slice(0, 3).map((syn, i) => (
                 <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 8, background: th.hoverBg }}>
@@ -220,9 +220,14 @@ export function Constellation({ habits, isDone, getStreak, getTotal, getCleanDay
               ))}
             </div>
           )}
-          {synergies.length === 0 && (
+          {isPro && synergies.length === 0 && (
             <div style={{ padding: "8px 14px 14px", fontSize: 11, color: th.textMuted, textAlign: "center" }}>
               Complete habits on the same days to form synergies
+            </div>
+          )}
+          {!isPro && (
+            <div style={{ padding: "6px 14px 12px", fontSize: 11, color: th.textMuted, textAlign: "center" }}>
+              Upgrade to Bloom+ for synergy details
             </div>
           )}
         </div>

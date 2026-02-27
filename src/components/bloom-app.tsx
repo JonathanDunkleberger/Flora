@@ -6,7 +6,7 @@ import {
   Check, Plus, X, Flame, ChevronLeft, Coins, Sparkles,
   Pencil, Shield, Sun, Moon, LayoutGrid,
   Users, RefreshCw, Wind, DollarSign,
-  Sunrise, SunMedium, MoonStar, Menu, Store, Snowflake,
+  Sunrise, SunMedium, MoonStar, Menu, Store, Pause, Play,
 } from "lucide-react";
 import { Creature } from "@/components/creature";
 import { TerrariumScene } from "@/components/terrarium-scene";
@@ -52,7 +52,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   const [coins, setCoins] = useState(initialCoins);
   const [earned, setEarned] = useState<EarnedMilestones>(initialEarned);
   const [streakFreezes, setStreakFreezes] = useState<Record<string, number>>(initialStreakFreezes);
-  const [frozenHabits, setFrozenHabits] = useState<Record<string, boolean>>({});
+  const [pausedHabits, setPausedHabits] = useState<Record<string, boolean>>({});
   const [earnedMilestoneCoins, setEarnedMilestoneCoins] = useState<Record<string, string[]>>({});
   const [milestoneCelebration, setMilestoneCelebration] = useState<{ tier: CoinTier; habitName: string; coinReward: number } | null>(null);
   const [darkMode, setDarkMode] = useState(false);
@@ -80,8 +80,12 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   const [menuOpen, setMenuOpen] = useState(false);
   const [ownedItems, setOwnedItems] = useState<string[]>([]);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const editRef = useRef<HTMLInputElement>(null);
+  const renameRef = useRef<HTMLInputElement>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const terRef = useRef<HTMLDivElement>(null);
 
   // ── Bloom+ tier state ──
@@ -158,10 +162,10 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
         if (rawItems) setOwnedItems(JSON.parse(rawItems));
       } catch { /* ignore */ }
 
-      // Load frozen habits
+      // Load paused habits
       try {
-        const rawFrozen = localStorage.getItem("bloom_frozen_habits");
-        if (rawFrozen) setFrozenHabits(JSON.parse(rawFrozen));
+        const rawPaused = localStorage.getItem("bloom_paused_habits");
+        if (rawPaused) setPausedHabits(JSON.parse(rawPaused));
       } catch { /* ignore */ }
 
       // Load earned milestone coins
@@ -218,12 +222,12 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
     }
   }, [ownedItems]);
 
-  // Persist frozen habits
+  // Persist paused habits
   useEffect(() => {
-    if (typeof window !== "undefined" && Object.keys(frozenHabits).length > 0) {
-      localStorage.setItem("bloom_frozen_habits", JSON.stringify(frozenHabits));
+    if (typeof window !== "undefined" && Object.keys(pausedHabits).length > 0) {
+      localStorage.setItem("bloom_paused_habits", JSON.stringify(pausedHabits));
     }
-  }, [frozenHabits]);
+  }, [pausedHabits]);
 
   // Persist milestone coins
   useEffect(() => {
@@ -434,9 +438,10 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
 
   const buildHabits = habits.filter((h) => h.category !== "quit");
   const quitHabits = habits.filter((h) => h.category === "quit");
-  const totalToday = habits.filter((h) => isHappy(h.id)).length;
-  const todayPct = habits.length ? totalToday / habits.length : 0;
-  const allDone = todayPct >= 1 && habits.length > 0;
+  const activeHabits = habits.filter((h) => !pausedHabits[h.id]);
+  const totalToday = activeHabits.filter((h) => isHappy(h.id)).length;
+  const todayPct = activeHabits.length ? totalToday / activeHabits.length : 0;
+  const allDone = todayPct >= 1 && activeHabits.length > 0;
 
   // All-done celebration + aurora
   useEffect(() => {
@@ -709,20 +714,36 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   };
 
   const saveEdit = async () => {
-    if (!editName.trim() || !detailId) return;
+    const trimmed = editName.trim().slice(0, 30);
+    if (!trimmed || !detailId) return;
     setHabits((p) =>
-      p.map((h) => (h.id === detailId ? { ...h, name: editName.trim(), color: editColor } : h))
+      p.map((h) => (h.id === detailId ? { ...h, name: trimmed, color: editColor } : h))
     );
     setEditMode(false);
     try {
       await fetch(`/api/habits/${detailId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editName.trim(), color: editColor }),
+        body: JSON.stringify({ name: trimmed, color: editColor }),
       });
     } catch {
       router.refresh();
     }
+  };
+
+  const saveRename = async (hId: string) => {
+    const trimmed = renameValue.trim().slice(0, 30);
+    if (!trimmed) { setRenamingId(null); return; }
+    setHabits((p) => p.map((h) => (h.id === hId ? { ...h, name: trimmed } : h)));
+    setRenamingId(null);
+    try {
+      const h = habits.find((x) => x.id === hId);
+      await fetch(`/api/habits/${hId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed, color: h?.color || "#6366f1" }),
+      });
+    } catch { router.refresh(); }
   };
 
   const buyFreeze = async (hId: string) => {
@@ -741,14 +762,14 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
     });
   };
 
-  const toggleFreeze = (hId: string) => {
-    const isFrozen = !!frozenHabits[hId];
-    setFrozenHabits((prev) => ({ ...prev, [hId]: !isFrozen }));
+  const togglePause = (hId: string) => {
+    const wasPaused = !!pausedHabits[hId];
+    setPausedHabits((prev) => ({ ...prev, [hId]: !wasPaused }));
     haptic("light");
-    if (!isFrozen) {
-      setCoinToast({ msg: "Habit frozen. Streak preserved while paused.", icon: Snowflake });
+    if (!wasPaused) {
+      setCoinToast({ msg: "Habit paused. Streak preserved.", icon: Pause });
     } else {
-      setCoinToast({ msg: "Habit unfrozen. Welcome back!", icon: Snowflake });
+      setCoinToast({ msg: "Habit resumed. Welcome back!", icon: Play });
     }
   };
 
@@ -803,6 +824,10 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   useEffect(() => {
     if (editMode && editRef.current) setTimeout(() => editRef.current?.focus(), 120);
   }, [editMode]);
+
+  useEffect(() => {
+    if (renamingId && renameRef.current) setTimeout(() => { renameRef.current?.focus(); renameRef.current?.select(); }, 50);
+  }, [renamingId]);
 
   const detailHabit = habits.find((h) => h.id === detailId);
   const fs = mounted
@@ -993,7 +1018,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 padding: "3px 10px", borderRadius: 100,
                 display: "flex", alignItems: "center", gap: 3, transition: "all .3s",
               }}>
-                <Flame size={11} />{totalToday}/{habits.length}
+                <Flame size={11} />{totalToday}/{activeHabits.length}
               </span>
             )}
             <div
@@ -1270,21 +1295,63 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
               ) : (
                 habits.map((h, idx) => {
                   const quit = isQuit(h);
-                  const done = !quit && isHappy(h.id);
+                  const isPaused = !!pausedHabits[h.id];
+                  const done = !quit && !isPaused && isHappy(h.id);
                   const streak = quit ? 0 : getStreak(h.id);
                   const hasFz = !quit && (streakFreezes[h.id] || 0) > 0;
-                  const isFrozen = !quit && !!frozenHabits[h.id];
                   const cleanDays = quit ? getCleanDays(h.id) : 0;
                   const qd = quit ? getQuitData(h.id) : undefined;
                   const moneySaved = quit && qd ? (qd.dailyCost || 0) * cleanDays : 0;
+                  const stage = getStageForId(h.id);
+                  const total = getTotal(h.id);
                   const isLast = idx === habits.length - 1;
+
+                  // Hours clean for quit habits in first 24h
+                  const hoursSinceQuit = quit && qd?.quitDate
+                    ? Math.floor((Date.now() - new Date(qd.quitDate).getTime()) / (1000 * 60 * 60))
+                    : 0;
+
+                  // Build subtitle
+                  let subtitle = "";
+                  if (isPaused) {
+                    subtitle = "Paused";
+                  } else if (quit && qd?.quitDate) {
+                    const timeStr = cleanDays === 0
+                      ? (hoursSinceQuit > 0 ? `${hoursSinceQuit}h clean` : "Just started")
+                      : cleanDays === 1 ? "1d clean" : `${fmtDuration(cleanDays)} clean`;
+                    subtitle = timeStr;
+                    if (moneySaved > 0) subtitle += ` · ${fmtMoney(moneySaved)} saved`;
+                    subtitle += ` · ${STAGE_LABELS[stage]}`;
+                  } else if (!quit && done) {
+                    subtitle = `${streak}d streak · ${STAGE_LABELS[stage]}`;
+                  } else if (!quit) {
+                    // Unchecked build habit — show stage and evolution timer
+                    const nextThreshold = stage < 4 ? STAGE_THRESHOLDS[stage + 1] : null;
+                    const remaining = nextThreshold ? nextThreshold - total : 0;
+                    const verb = stage === 0 ? "hatches" : "evolves";
+                    subtitle = remaining > 0 ? `${STAGE_LABELS[stage]} · ${verb} in ${remaining}d` : STAGE_LABELS[stage];
+                  }
+
                   return (
                     <div key={h.id} className="rw" style={{
                       background: th.card, animation: "fadeUp 0.3s ease",
                       borderBottom: isLast ? "none" : "1px solid rgba(255,255,255,0.04)",
                       borderRadius: isLast ? undefined : 0,
+                      opacity: isPaused ? 0.5 : 1,
                     }}>
-                        {quit ? (
+                        {isPaused ? (
+                          /* Paused: pause icon */
+                          <div
+                            style={{
+                              width: 26, height: 26, borderRadius: 8,
+                              background: "rgba(255,255,255,0.05)",
+                              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                            }}
+                            onClick={() => { setDetailId(h.id); setPage("detail"); }}
+                          >
+                            <Pause size={14} color={th.textMuted} strokeWidth={2} />
+                          </div>
+                        ) : quit ? (
                           /* Quit habit: green shield indicator */
                           <div
                             style={{
@@ -1304,50 +1371,65 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                             style={{
                               background: done ? h.color : "transparent",
                               borderColor: done ? "transparent" : th.checkBorder,
-                              opacity: isFrozen ? 0.3 : 1,
-                              pointerEvents: isFrozen ? "none" : "auto",
                             }}
-                            onClick={(e) => { e.stopPropagation(); if (!isFrozen) toggleCompletion(h.id); }}
+                            onClick={(e) => { e.stopPropagation(); toggleCompletion(h.id); }}
                           >
-                            {isFrozen ? <Snowflake size={14} color={th.textMuted} strokeWidth={2} /> : <Check size={14} color="white" strokeWidth={3} />}
+                            <Check size={14} color="white" strokeWidth={3} />
                           </div>
                         )}
                         <div
-                          style={{ flex: 1, cursor: "pointer" }}
-                          onClick={() => { setDetailId(h.id); setPage("detail"); }}
+                          style={{ flex: 1, cursor: "pointer", minWidth: 0 }}
+                          onClick={() => { if (renamingId !== h.id) { setDetailId(h.id); setPage("detail"); } }}
+                          onTouchStart={() => { longPressTimer.current = setTimeout(() => { setRenamingId(h.id); setRenameValue(h.name); }, 500); }}
+                          onTouchEnd={() => { if (longPressTimer.current) clearTimeout(longPressTimer.current); }}
+                          onTouchMove={() => { if (longPressTimer.current) clearTimeout(longPressTimer.current); }}
+                          onMouseDown={() => { longPressTimer.current = setTimeout(() => { setRenamingId(h.id); setRenameValue(h.name); }, 500); }}
+                          onMouseUp={() => { if (longPressTimer.current) clearTimeout(longPressTimer.current); }}
+                          onMouseLeave={() => { if (longPressTimer.current) clearTimeout(longPressTimer.current); }}
                         >
+                          {renamingId === h.id ? (
+                            <input
+                              ref={renameRef}
+                              value={renameValue}
+                              maxLength={30}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter") saveRename(h.id); if (e.key === "Escape") setRenamingId(null); }}
+                              onBlur={() => saveRename(h.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                fontSize: 15, fontWeight: 500, color: th.text,
+                                background: th.inputBg, border: `1px solid ${th.inputBorder}`,
+                                borderRadius: 6, padding: "2px 6px", width: "100%",
+                                outline: "none", fontFamily: "inherit",
+                              }}
+                            />
+                          ) : (
                           <span style={{
                             fontSize: 15, fontWeight: 500,
-                            textDecoration: !quit && done ? "line-through" : "none",
-                            color: isFrozen ? th.textMuted : (!quit && done ? th.textMuted : th.text),
+                            textDecoration: done ? "line-through" : "none",
+                            color: isPaused ? th.textMuted : (done ? th.textMuted : th.text),
                             transition: "all 0.2s",
-                            display: "inline-flex", alignItems: "center", gap: 4,
                           }}>
                             {h.name}
-                            {isFrozen && <Snowflake size={12} color="#60a5fa" strokeWidth={2} />}
                           </span>
-                          {quit && qd?.quitDate && (
-                            <div style={{ fontSize: 11, color: darkMode ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.3)", fontWeight: 500, marginTop: 1 }}>
-                              {cleanDays === 0 ? "Just started" : cleanDays === 1 ? "1 day clean" : `${fmtDuration(cleanDays)} clean`}{moneySaved > 0 && <span style={{ color: "#4caf50", marginLeft: 4 }}>{"\u00b7"} {fmtMoney(moneySaved)} saved</span>}
-                            </div>
                           )}
-                          {isFrozen && (
-                            <div style={{ fontSize: 11, color: "#60a5fa", fontWeight: 500, marginTop: 1 }}>
-                              Frozen {"\u00b7"} streak preserved
-                            </div>
-                          )}
-                          {!quit && !isFrozen && streak > 0 && (
-                            <div style={{ fontSize: 11, color: th.textSub, fontWeight: 500, marginTop: 1 }}>
-                              {streak}d streak{hasFz ? " \u00b7 freeze active" : ""}
+                          {subtitle && (
+                            <div style={{
+                              fontSize: 11, fontWeight: 500, marginTop: 1,
+                              color: isPaused ? "#60a5fa" : (quit ? (darkMode ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.3)") : th.textSub),
+                            }}>
+                              {subtitle}
                             </div>
                           )}
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                           {/* Milestone coin badge */}
-                          {(earnedMilestoneCoins[h.id] || []).length > 0 && (
-                            <CoinBadge earnedCoins={earnedMilestoneCoins[h.id]} isQuit={quit} />
+                          {!isPaused && (earnedMilestoneCoins[h.id] || []).length > 0 && (
+                            <div onClick={() => { setDetailId(h.id); setPage("detail"); }} style={{ cursor: "pointer" }}>
+                              <CoinBadge earnedCoins={earnedMilestoneCoins[h.id]} isQuit={quit} />
+                            </div>
                           )}
-                          {quit ? (
+                          {!isPaused && quit && (
                             <button
                               onClick={(e) => { e.stopPropagation(); setUrgeSupportHabit(h); }}
                               style={{
@@ -1359,18 +1441,15 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                             >
                               <Wind size={9} /> Urge
                             </button>
-                          ) : (
-                            <>
-                              {streak >= 7 && (
-                                <span style={{
-                                  fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 100,
-                                  background: th.streakActiveBg, color: "#d97706",
-                                  display: "inline-flex", alignItems: "center", gap: 2,
-                                }}>
-                                  <Flame size={9} />{streak}d
-                                </span>
-                              )}
-                            </>
+                          )}
+                          {!isPaused && !quit && streak >= 7 && (
+                            <span style={{
+                              fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 100,
+                              background: th.streakActiveBg, color: "#d97706",
+                              display: "inline-flex", alignItems: "center", gap: 2,
+                            }}>
+                              <Flame size={9} />{streak}d
+                            </span>
                           )}
                         </div>
                         {/* Gray × delete */}
@@ -1418,45 +1497,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
               ) : null;
             })()}
 
-            {/* Next evolution preview */}
-            {habits.length > 0 && (() => {
-              const closest = habits
-                .map((h) => ({ h, stage: getStageForId(h.id), total: getTotal(h.id) }))
-                .filter((c) => c.stage < 4)
-                .map((c) => ({ ...c, next: STAGE_THRESHOLDS[c.stage + 1], remaining: STAGE_THRESHOLDS[c.stage + 1] - c.total }))
-                .sort((a, b) => a.remaining - b.remaining)[0];
-              if (!closest || closest.remaining > 10) return null;
-              return (
-                <div
-                  onClick={() => { setDetailId(closest.h.id); setPage("detail"); }}
-                  style={{
-                  marginTop: 8, padding: "10px 14px", borderRadius: 12,
-                  background: `linear-gradient(135deg,${closest.h.color}06,rgba(255,215,0,0.03))`,
-                  border: `1px solid ${closest.h.color}15`,
-                  display: "flex", alignItems: "center", gap: 10,
-                  cursor: "pointer",
-                }}>
-                  <div style={{ position: "relative" }}>
-                    <Creature stage={closest.stage} color={closest.h.color} happy={true} size={32} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: th.text }}>
-                      {closest.h.name} evolves in <span style={{ color: closest.h.color }}>{closest.remaining} {closest.remaining === 1 ? "day" : "days"}</span>
-                    </div>
-                    <div style={{ fontSize: 10, color: th.textSub }}>
-                      {STAGE_LABELS[closest.stage]} → {STAGE_LABELS[closest.stage + 1]}
-                    </div>
-                  </div>
-                  <div style={{
-                    width: 28, height: 28, borderRadius: "50%",
-                    border: `2px dashed ${closest.h.color}30`,
-                    display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.4,
-                  }}>
-                    <span style={{ fontSize: 10 }}>?</span>
-                  </div>
-                </div>
-              );
-            })()}
+
 
             {habits.length > 0 && (
               <div className="cd" style={{
@@ -1506,7 +1547,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
               {editMode ? (
                 <div style={{ marginTop: 8, maxWidth: 260, margin: "8px auto 0" }}>
                   <input
-                    ref={editRef} className="inp" value={editName}
+                    ref={editRef} className="inp" value={editName} maxLength={30}
                     onChange={(e) => setEditName(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") saveEdit(); }}
                     style={{
@@ -1668,6 +1709,23 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 })()}
             </div>
 
+            {/* Pause / Resume toggle — all habit types */}
+            <button
+              onClick={() => togglePause(detailHabit.id)}
+              style={{
+                width: "100%", padding: "12px 16px", borderRadius: 12, marginBottom: 10,
+                border: `1px solid ${pausedHabits[detailHabit.id] ? "rgba(74,222,128,0.2)" : "rgba(255,255,255,0.08)"}`,
+                background: "transparent", cursor: "pointer", fontFamily: "inherit",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                fontSize: 14, fontWeight: 500,
+                color: pausedHabits[detailHabit.id] ? "#4ade80" : th.textMuted,
+                transition: "all 0.15s",
+              }}
+            >
+              {pausedHabits[detailHabit.id] ? <Play size={16} /> : <Pause size={16} />}
+              {pausedHabits[detailHabit.id] ? "Resume this habit" : "Pause this habit"}
+            </button>
+
             {/* ── Quit-specific sections ── */}
             {dq && (
               <>
@@ -1801,53 +1859,6 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
             {/* ── Build-specific sections ── */}
             {!dq && (
               <>
-                {/* Streak freeze */}
-                <div className="cd" style={{
-                  padding: 14, marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between",
-                  background: th.card, borderColor: th.cardBorder, boxShadow: th.cardShadow,
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <Shield size={16} color="#42b4d6" />
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: th.text }}>Streak Freeze</div>
-                      <div style={{ fontSize: 10, color: th.textSub }}>
-                        {frozenHabits[detailHabit.id]
-                          ? "Habit is paused — streak preserved"
-                          : (streakFreezes[detailHabit.id] || 0) > 0
-                            ? `${streakFreezes[detailHabit.id]} freeze${(streakFreezes[detailHabit.id] || 0) > 1 ? "s" : ""} active`
-                            : "Protect your streak from one missed day"}
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <button
-                      className="btn-s"
-                      onClick={() => toggleFreeze(detailHabit.id)}
-                      style={{
-                        background: frozenHabits[detailHabit.id] ? "#60a5fa" : th.freezeBtnBg,
-                        color: frozenHabits[detailHabit.id] ? "#fff" : "#42b4d6",
-                        whiteSpace: "nowrap",
-                        display: "inline-flex", alignItems: "center", gap: 3,
-                      }}
-                    >
-                      <Snowflake size={11} /> {frozenHabits[detailHabit.id] ? "Unfreeze" : "Freeze"}
-                    </button>
-                    {!frozenHabits[detailHabit.id] && (
-                      <button
-                        className="btn-s"
-                        onClick={() => buyFreeze(detailHabit.id)}
-                        style={{
-                          background: coins >= 50 ? th.freezeBtnBg : th.freezeBtnOff,
-                          color: coins >= 50 ? "#42b4d6" : th.textMuted,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        <Coins size={11} /> 50
-                      </button>
-                    )}
-                  </div>
-                </div>
-
                 {/* Activity heatmap — compact 12 weeks */}
                 <div className="cd" style={{
                   padding: "12px 10px", marginBottom: 10,

@@ -4,42 +4,27 @@
       <stop offset="0%" stop-color="#131B2E"/>
       <stop offset="100%" stop-color="#0a0e18"/>
     </linearGradient>
-    <radialGradient id="glow" cx="0.65" cy="0.62" r="0.25">
+    <radialGradient id="glow" cx="0.6" cy="0.62" r="0.25">
       <stop offset="0%" stop-color="#4ade80" stop-opacity="0.06"/>
       <stop offset="100%" stop-color="#4ade80" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <!-- Background — no rounded corners, iOS adds them -->
   <rect width="1024" height="1024" fill="url(#bg)"/>
-  <!-- Subtle green glow around the dot area -->
   <rect width="1024" height="1024" fill="url(#glow)"/>
-  <!-- Subtle grid texture -->
   <g opacity="0.035">
-    <circle cx="200" cy="200" r="2.5" fill="white"/>
-    <circle cx="400" cy="200" r="2.5" fill="white"/>
-    <circle cx="600" cy="200" r="2.5" fill="white"/>
-    <circle cx="800" cy="200" r="2.5" fill="white"/>
-    <circle cx="200" cy="400" r="2.5" fill="white"/>
-    <circle cx="400" cy="400" r="2.5" fill="white"/>
-    <circle cx="600" cy="400" r="2.5" fill="white"/>
-    <circle cx="800" cy="400" r="2.5" fill="white"/>
-    <circle cx="200" cy="600" r="2.5" fill="white"/>
-    <circle cx="400" cy="600" r="2.5" fill="white"/>
-    <circle cx="600" cy="600" r="2.5" fill="white"/>
-    <circle cx="800" cy="600" r="2.5" fill="white"/>
-    <circle cx="200" cy="800" r="2.5" fill="white"/>
-    <circle cx="400" cy="800" r="2.5" fill="white"/>
-    <circle cx="600" cy="800" r="2.5" fill="white"/>
-    <circle cx="800" cy="800" r="2.5" fill="white"/>
+    <circle cx="200" cy="200" r="2.5" fill="white"/><circle cx="400" cy="200" r="2.5" fill="white"/>
+    <circle cx="600" cy="200" r="2.5" fill="white"/><circle cx="800" cy="200" r="2.5" fill="white"/>
+    <circle cx="200" cy="400" r="2.5" fill="white"/><circle cx="400" cy="400" r="2.5" fill="white"/>
+    <circle cx="600" cy="400" r="2.5" fill="white"/><circle cx="800" cy="400" r="2.5" fill="white"/>
+    <circle cx="200" cy="600" r="2.5" fill="white"/><circle cx="400" cy="600" r="2.5" fill="white"/>
+    <circle cx="600" cy="600" r="2.5" fill="white"/><circle cx="800" cy="600" r="2.5" fill="white"/>
+    <circle cx="200" cy="800" r="2.5" fill="white"/><circle cx="400" cy="800" r="2.5" fill="white"/>
+    <circle cx="600" cy="800" r="2.5" fill="white"/><circle cx="800" cy="800" r="2.5" fill="white"/>
   </g>
-  <!-- "b" letterform -->
-  <text x="230" y="745" font-family="Georgia, 'Times New Roman', serif" font-size="680" font-weight="700" fill="#e8e6f0" letter-spacing="-15">b</text>
-  <!-- Green dot with leaf detail -->
-  <g transform="translate(730, 648)">
+  <text x="260" y="745" font-family="Georgia, 'Times New Roman', serif" font-size="680" font-weight="700" fill="#e8e6f0" letter-spacing="-15">t</text>
+  <g transform="translate(700, 648)">
     <circle cx="0" cy="0" r="46" fill="#4ade80"/>
-    <!-- Leaf detail inside dot -->
     <ellipse cx="5" cy="-9" rx="16" ry="7.5" fill="#6ee7a0" transform="rotate(-30, 5, -9)"/>
-    <!-- Tiny stem -->
     <line x1="0" y1="-2" x2="4" y2="-10" stroke="#3ec472" stroke-width="2" stroke-linecap="round"/>
   </g>
 </svg>

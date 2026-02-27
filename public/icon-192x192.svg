@@ -6,26 +6,17 @@
     </linearGradient>
   </defs>
   <rect width="192" height="192" rx="42" fill="url(#bg)"/>
-  <!-- Subtle texture dots -->
-  <circle cx="38" cy="38" r="0.6" fill="white" opacity="0.04"/>
-  <circle cx="77" cy="38" r="0.6" fill="white" opacity="0.04"/>
-  <circle cx="115" cy="38" r="0.6" fill="white" opacity="0.04"/>
-  <circle cx="154" cy="38" r="0.6" fill="white" opacity="0.04"/>
-  <circle cx="38" cy="77" r="0.6" fill="white" opacity="0.04"/>
-  <circle cx="77" cy="77" r="0.6" fill="white" opacity="0.04"/>
-  <circle cx="115" cy="77" r="0.6" fill="white" opacity="0.04"/>
-  <circle cx="154" cy="77" r="0.6" fill="white" opacity="0.04"/>
-  <circle cx="38" cy="115" r="0.6" fill="white" opacity="0.04"/>
-  <circle cx="77" cy="115" r="0.6" fill="white" opacity="0.04"/>
-  <circle cx="115" cy="115" r="0.6" fill="white" opacity="0.04"/>
-  <circle cx="154" cy="115" r="0.6" fill="white" opacity="0.04"/>
-  <circle cx="38" cy="154" r="0.6" fill="white" opacity="0.04"/>
-  <circle cx="77" cy="154" r="0.6" fill="white" opacity="0.04"/>
-  <circle cx="115" cy="154" r="0.6" fill="white" opacity="0.04"/>
-  <circle cx="154" cy="154" r="0.6" fill="white" opacity="0.04"/>
-  <!-- "b" -->
-  <text x="45" y="140" font-family="Georgia, 'Times New Roman', serif" font-size="128" font-weight="700" fill="#e8e6f0">b</text>
-  <!-- Green dot -->
-  <circle cx="139" cy="124" r="13" fill="#4ade80"/>
-  <ellipse cx="141.5" cy="119.5" rx="5.5" ry="2.7" fill="#6ee7a0" transform="rotate(-30, 141.5, 119.5)"/>
+  <g opacity="0.04">
+    <circle cx="38" cy="38" r="0.6" fill="white"/><circle cx="77" cy="38" r="0.6" fill="white"/>
+    <circle cx="115" cy="38" r="0.6" fill="white"/><circle cx="154" cy="38" r="0.6" fill="white"/>
+    <circle cx="38" cy="77" r="0.6" fill="white"/><circle cx="77" cy="77" r="0.6" fill="white"/>
+    <circle cx="115" cy="77" r="0.6" fill="white"/><circle cx="154" cy="77" r="0.6" fill="white"/>
+    <circle cx="38" cy="115" r="0.6" fill="white"/><circle cx="77" cy="115" r="0.6" fill="white"/>
+    <circle cx="115" cy="115" r="0.6" fill="white"/><circle cx="154" cy="115" r="0.6" fill="white"/>
+    <circle cx="38" cy="154" r="0.6" fill="white"/><circle cx="77" cy="154" r="0.6" fill="white"/>
+    <circle cx="115" cy="154" r="0.6" fill="white"/><circle cx="154" cy="154" r="0.6" fill="white"/>
+  </g>
+  <text x="51" y="140" font-family="Georgia, 'Times New Roman', serif" font-size="128" font-weight="700" fill="#e8e6f0">t</text>
+  <circle cx="133" cy="124" r="13" fill="#4ade80"/>
+  <ellipse cx="135.5" cy="119.5" rx="5.5" ry="2.7" fill="#6ee7a0" transform="rotate(-30, 135.5, 119.5)"/>
 </svg>
