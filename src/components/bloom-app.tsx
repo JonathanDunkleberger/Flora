@@ -22,10 +22,11 @@ import { UrgeTrend } from "@/components/urge-trend";
 import { RelapseModal } from "@/components/relapse-modal";
 import { ReasonEditor } from "@/components/reason-editor";
 import { Shop } from "@/components/shop";
+import { BloomPlusScreen, BloomPlusMiniPrompt, SevenDayCelebration } from "@/components/bloom-plus-screen";
 import { getStage, getIcon, today, daysAgo, daysBetween, fmtDuration, fmtMoney, fmtQuitDate } from "@/lib/utils";
 import {
   MILESTONES, STAGE_LABELS, STAGE_THRESHOLDS,
-  PRESETS, PRESET_CATEGORIES, HABIT_COLORS,
+  PRESETS, PRESET_CATEGORIES, HABIT_COLORS, FREE_HABIT_LIMIT,
   SEASONS, getSeason, THEME, BOUNCE_BACK,
   QUIT_PRESETS, SHOP_ITEMS,
 } from "@/lib/constants";
@@ -77,6 +78,29 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   const editRef = useRef<HTMLInputElement>(null);
   const terRef = useRef<HTMLDivElement>(null);
 
+  // ── Bloom+ tier state ──
+  const [isPro, setIsPro] = useState(false);
+  const [proExpiry, setProExpiry] = useState<string | null>(null);
+  const [lastBonusDate, setLastBonusDate] = useState<string | null>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [showPremiumPrompt, setShowPremiumPrompt] = useState(false);
+  const [sevenDayCelebration, setSevenDayCelebration] = useState<{ habitName: string; moneySaved: number; urgeCount: number } | null>(null);
+  const logoTapRef = useRef<{ count: number; timer: ReturnType<typeof setTimeout> | null }>({ count: 0, timer: null });
+
+  const isBloomPlus = useCallback((): boolean => {
+    if (!isPro) return false;
+    if (proExpiry && new Date(proExpiry) < new Date()) {
+      setIsPro(false);
+      setProExpiry(null);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("bloom_pro");
+        localStorage.removeItem("bloom_pro_expiry");
+      }
+      return false;
+    }
+    return true;
+  }, [isPro, proExpiry]);
+
   useEffect(() => {
     setTimeout(() => setMounted(true), 50);
 
@@ -111,6 +135,14 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
         const rawItems = localStorage.getItem("bloom_owned_items");
         if (rawItems) setOwnedItems(JSON.parse(rawItems));
       } catch { /* ignore */ }
+
+      // Load Bloom+ state
+      const savedPro = localStorage.getItem("bloom_pro");
+      if (savedPro === "1") setIsPro(true);
+      const savedExpiry = localStorage.getItem("bloom_pro_expiry");
+      if (savedExpiry) setProExpiry(savedExpiry);
+      const savedBonus = localStorage.getItem("bloom_last_bonus");
+      if (savedBonus) setLastBonusDate(savedBonus);
     }
   }, []);
 
@@ -135,6 +167,44 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("bloom_season", season);
   }, [season]);
+
+  // Persist Bloom+ state
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("bloom_pro", isPro ? "1" : "0");
+      if (proExpiry) localStorage.setItem("bloom_pro_expiry", proExpiry);
+      else localStorage.removeItem("bloom_pro_expiry");
+    }
+  }, [isPro, proExpiry]);
+
+  // Daily bonus coins for Bloom+ users
+  useEffect(() => {
+    if (!mounted) return;
+    const todayVal = today();
+    if (isBloomPlus() && lastBonusDate !== todayVal) {
+      setCoins((c) => c + 5);
+      setLastBonusDate(todayVal);
+      localStorage.setItem("bloom_last_bonus", todayVal);
+      setCoinToast({ msg: "+5 daily Bloom+ coins", icon: Coins });
+      fetch("/api/coins", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ coins: coins + 5 }) }).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, isPro]);
+
+  // Dev toggle: tap logo 5x
+  const onLogoTap = useCallback(() => {
+    const ref = logoTapRef.current;
+    ref.count++;
+    if (ref.timer) clearTimeout(ref.timer);
+    ref.timer = setTimeout(() => { ref.count = 0; }, 2000);
+    if (ref.count >= 5) {
+      ref.count = 0;
+      const newPro = !isPro;
+      setIsPro(newPro);
+      setProExpiry(newPro ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : null);
+      setCoinToast({ msg: newPro ? "Bloom+ enabled (dev)" : "Bloom+ disabled (dev)", icon: Sparkles });
+    }
+  }, [isPro]);
 
   const todayStr = today();
 
@@ -369,6 +439,23 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
       fired[h.id] = prev;
     });
     if (changed) localStorage.setItem("bloom_quit_celebrations", JSON.stringify(fired));
+
+    // 7-day Bloom+ nudge — show SevenDayCelebration once per quit habit
+    if (!isBloomPlus()) {
+      const shown7 = JSON.parse(localStorage.getItem("bloom_7day_shown") || "{}") as Record<string, boolean>;
+      for (const h of habits.filter((h) => h.category === "quit")) {
+        const cd = getCleanDays(h.id);
+        if (cd >= 7 && !shown7[h.id]) {
+          shown7[h.id] = true;
+          localStorage.setItem("bloom_7day_shown", JSON.stringify(shown7));
+          const qd = quitDataMap[h.id];
+          const cost = qd?.dailyCost ?? 0;
+          const urgeCount = (qd?.urges ?? []).length;
+          setSevenDayCelebration({ habitName: h.name, moneySaved: Math.round(cost * cd * 100) / 100, urgeCount });
+          break; // only show one at a time
+        }
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mounted, todayStr]);
 
@@ -605,6 +692,39 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
         />
       )}
 
+      {/* Bloom+ paywall screen */}
+      {showPaywall && (
+        <BloomPlusScreen
+          onClose={() => setShowPaywall(false)}
+          onSubscribe={(plan) => {
+            // For now (dev/testing), just enable Bloom+
+            setIsPro(true);
+            setProExpiry(new Date(Date.now() + (plan === "annual" ? 365 : 30) * 24 * 60 * 60 * 1000).toISOString());
+            setShowPaywall(false);
+            setCoinToast({ msg: "Welcome to Bloom+!", icon: Sparkles });
+          }}
+        />
+      )}
+
+      {/* Premium shop item mini-prompt */}
+      {showPremiumPrompt && (
+        <BloomPlusMiniPrompt
+          onSeeBloomPlus={() => { setShowPremiumPrompt(false); setShowPaywall(true); }}
+          onDismiss={() => setShowPremiumPrompt(false)}
+        />
+      )}
+
+      {/* 7-day celebration */}
+      {sevenDayCelebration && (
+        <SevenDayCelebration
+          habitName={sevenDayCelebration.habitName}
+          moneySaved={sevenDayCelebration.moneySaved}
+          urgeCount={sevenDayCelebration.urgeCount}
+          onTryBloomPlus={() => { setSevenDayCelebration(null); setShowPaywall(true); }}
+          onKeepGoingFree={() => setSevenDayCelebration(null)}
+        />
+      )}
+
       <div style={{ maxWidth: 520, margin: "0 auto", padding: "0 14px 90px" }}>
         {/* HEADER */}
         <div style={{ ...fs, padding: "14px 2px 8px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -620,8 +740,12 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
               <ChevronLeft size={16} />Back
             </button>
           ) : (
-            <h1 style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 600, letterSpacing: "-0.5px", color: th.text }}>
+            <h1
+              onClick={onLogoTap}
+              style={{ fontFamily: "'Fraunces',serif", fontSize: 24, fontWeight: 600, letterSpacing: "-0.5px", color: th.text, cursor: "default", userSelect: "none" }}
+            >
               bloom<span style={{ color: "#4caf50" }}>.</span>
+              {isBloomPlus() && <span style={{ fontSize: 10, fontWeight: 700, color: "#4ade80", marginLeft: 3, verticalAlign: "super" }}>+</span>}
             </h1>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -1103,10 +1227,29 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                       background: th.inputBg, borderColor: th.inputBorder, color: th.text,
                     }}
                   />
-                  <div style={{ display: "flex", gap: 4, justifyContent: "center", marginBottom: 10 }}>
+                  <div style={{ display: "flex", gap: 4, justifyContent: "center", marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
                     {HABIT_COLORS.map((c) => (
                       <div key={c} className={`ct ${editColor === c ? "sl" : ""}`} style={{ background: c }} onClick={() => setEditColor(c)} />
                     ))}
+                    {isBloomPlus() ? (
+                      <label style={{ position: "relative", cursor: "pointer" }}>
+                        <div className={`ct ${!HABIT_COLORS.includes(editColor) ? "sl" : ""}`} style={{
+                          background: HABIT_COLORS.includes(editColor) ? "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)" : editColor,
+                          position: "relative",
+                        }} />
+                        <input type="color" value={editColor} onChange={(e) => setEditColor(e.target.value)}
+                          style={{ position: "absolute", opacity: 0, width: 0, height: 0, top: 0, left: 0 }} />
+                      </label>
+                    ) : (
+                      <div
+                        onClick={() => setShowPaywall(true)}
+                        className="ct"
+                        title="Custom colors with Bloom+"
+                        style={{ background: "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)", opacity: 0.4, cursor: "pointer", position: "relative" }}
+                      >
+                        <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "white", fontWeight: 700, textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}>+</span>
+                      </div>
+                    )}
                   </div>
                   <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
                     <button className="btn-s" onClick={() => setEditMode(false)} style={{ background: th.progressBg, color: th.textSub }}>Cancel</button>
@@ -1376,7 +1519,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
         {/* ═══ CONSTELLATION ═══ */}
         {page === "constellation" && (
           <div style={{ animation: "fadeUp 0.28s ease" }}>
-            <Constellation habits={habits} isDone={isComplete} getStreak={getStreak} getTotal={getTotal} getCleanDays={getCleanDays} th={th} />
+            <Constellation habits={habits} isDone={isComplete} getStreak={getStreak} getTotal={getTotal} getCleanDays={getCleanDays} th={th} isPro={isBloomPlus()} onUpgrade={() => setShowPaywall(true)} />
           </div>
         )}
 
@@ -1392,6 +1535,8 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
         {/* ═══ SHOP ═══ */}
         {page === "shop" && (
           <Shop coins={coins} ownedItems={ownedItems} onBuy={buyItem} th={th}
+            isPro={isBloomPlus()}
+            onPremiumTap={() => setShowPremiumPrompt(true)}
             onOwnedTap={() => { setPage("main"); setTimeout(() => terRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100); }}
           />
         )}
@@ -1400,7 +1545,13 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
       {/* FAB */}
       {page === "main" && (
         <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 50 }}>
-          <button className="fab" onClick={() => setPage("add")}>
+          <button className="fab" onClick={() => {
+            if (habits.length >= FREE_HABIT_LIMIT && !isBloomPlus()) {
+              setShowPaywall(true);
+              return;
+            }
+            setPage("add");
+          }}>
             <Plus size={22} />
           </button>
         </div>
@@ -1471,10 +1622,29 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
             })}
             <div style={{ marginTop: 6 }}>
               <div className="lb" style={{ marginBottom: 5, color: th.label }}>Custom</div>
-              <div style={{ display: "flex", gap: 5, marginBottom: 8, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 5, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
                 {HABIT_COLORS.map((c) => (
                   <div key={c} className={`ct ${cColor === c ? "sl" : ""}`} style={{ background: c }} onClick={() => setCColor(c)} />
                 ))}
+                {isBloomPlus() ? (
+                  <label style={{ position: "relative", cursor: "pointer" }}>
+                    <div className={`ct ${!HABIT_COLORS.includes(cColor) ? "sl" : ""}`} style={{
+                      background: HABIT_COLORS.includes(cColor) ? "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)" : cColor,
+                      position: "relative",
+                    }} />
+                    <input type="color" value={cColor} onChange={(e) => setCColor(e.target.value)}
+                      style={{ position: "absolute", opacity: 0, width: 0, height: 0, top: 0, left: 0 }} />
+                  </label>
+                ) : (
+                  <div
+                    onClick={() => setShowPaywall(true)}
+                    className="ct"
+                    title="Custom colors with Bloom+"
+                    style={{ background: "conic-gradient(red,yellow,lime,aqua,blue,magenta,red)", opacity: 0.4, cursor: "pointer", position: "relative" }}
+                  >
+                    <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "white", fontWeight: 700, textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}>+</span>
+                  </div>
+                )}
               </div>
               <div style={{ display: "flex", gap: 7 }}>
                 <input

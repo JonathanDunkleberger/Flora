@@ -13,6 +13,8 @@ interface ConstellationProps {
   getStreak: (id: string) => number;
   getTotal: (id: string) => number;
   getCleanDays?: (id: string) => number;
+  isPro?: boolean;
+  onUpgrade?: () => void;
   th: ThemeColors;
 }
 
@@ -25,7 +27,7 @@ interface Synergy {
   label: string;
 }
 
-export function Constellation({ habits, isDone, getStreak, getTotal, getCleanDays, th }: ConstellationProps) {
+export function Constellation({ habits, isDone, getStreak, getTotal, getCleanDays, isPro, onUpgrade, th }: ConstellationProps) {
   const sr = seed;
 
   const buildHabits = habits.filter((h) => h.category !== "quit");
@@ -156,8 +158,8 @@ export function Constellation({ habits, isDone, getStreak, getTotal, getCleanDay
         </div>
       </div>
 
-      {/* ── 2. Habit synergies (constellation visual) ── */}
-      {buildHabits.length >= 2 && (
+      {/* ── 2. Habit synergies (constellation visual) — Bloom+ only ── */}
+      {isPro && buildHabits.length >= 2 && (
         <div className="cd" style={{ overflow: "hidden", marginBottom: 10, background: th.card, borderColor: th.cardBorder, boxShadow: th.cardShadow }}>
           <div style={{ padding: "12px 14px 0" }}>
             <div className="lb" style={{ color: th.label, display: "flex", alignItems: "center", gap: 4 }}>
@@ -226,7 +228,8 @@ export function Constellation({ habits, isDone, getStreak, getTotal, getCleanDay
         </div>
       )}
 
-      {/* ── 3. Streak insights ── */}
+      {/* ── 3. Streak insights — Bloom+ only ── */}
+      {isPro && (
       <div className="cd" style={{ padding: 14, marginBottom: 10, background: th.card, borderColor: th.cardBorder, boxShadow: th.cardShadow }}>
         <div className="lb" style={{ marginBottom: 10, color: th.label, display: "flex", alignItems: "center", gap: 4 }}>
           <TrendingUp size={10} /> Streak Insights
@@ -272,6 +275,7 @@ export function Constellation({ habits, isDone, getStreak, getTotal, getCleanDay
           )}
         </div>
       </div>
+      )}
 
       {/* ── 4. Calm advice ── */}
       {habits.length > 0 && (
@@ -282,6 +286,40 @@ export function Constellation({ habits, isDone, getStreak, getTotal, getCleanDay
               &ldquo;{advice}&rdquo;
             </p>
           </div>
+        </div>
+      )}
+
+      {/* ── 5. Free-user upgrade card ── */}
+      {!isPro && habits.length > 0 && (
+        <div className="cd" style={{
+          padding: 18,
+          marginBottom: 10,
+          background: "linear-gradient(135deg, rgba(74,222,128,0.08), rgba(74,222,128,0.02))",
+          borderColor: "rgba(74,222,128,0.25)",
+          boxShadow: th.cardShadow,
+          textAlign: "center",
+        }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: th.text, marginBottom: 4 }}>
+            See your full picture
+          </div>
+          <div style={{ fontSize: 12, color: th.textSub, lineHeight: 1.5, marginBottom: 12 }}>
+            Trigger patterns, habit synergies, and day-of-week analysis help you understand what works.
+          </div>
+          <button
+            onClick={() => onUpgrade?.()}
+            style={{
+              background: "#4ade80",
+              color: "#0a0e18",
+              border: "none",
+              borderRadius: 10,
+              padding: "8px 20px",
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Unlock with Bloom+
+          </button>
         </div>
       )}
     </div>

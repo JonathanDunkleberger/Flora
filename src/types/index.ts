@@ -75,6 +75,7 @@ export interface ShopItem {
   description: string;
   price: number;
   category: ShopCategory;
+  premium?: boolean;
 }
 
 export type ShopCategory = "landscape" | "trees" | "flowers" | "decorations";

@@ -12,10 +12,12 @@ interface ShopProps {
   ownedItems: string[];
   onBuy: (itemId: string) => void;
   onOwnedTap?: (itemId: string) => void;
+  isPro?: boolean;
+  onPremiumTap?: () => void;
   th: ThemeColors;
 }
 
-export function Shop({ coins, ownedItems, onBuy, onOwnedTap, th }: ShopProps) {
+export function Shop({ coins, ownedItems, onBuy, onOwnedTap, isPro, onPremiumTap, th }: ShopProps) {
   const [activeCategory, setActiveCategory] = useState<ShopCategory>("landscape");
 
   const items = SHOP_ITEMS.filter((item) => item.category === activeCategory);
@@ -82,18 +84,32 @@ export function Shop({ coins, ownedItems, onBuy, onOwnedTap, th }: ShopProps) {
         {items.map((item) => {
           const owned = ownedItems.includes(item.id);
           const canAfford = coins >= item.price;
+          const locked = !!(item.premium && !isPro && !owned);
           return (
             <div
               key={item.id}
               className="cd"
               style={{
-                padding: 16, textAlign: "center",
+                padding: 16, textAlign: "center", position: "relative",
                 background: th.card, borderColor: owned ? "rgba(76,175,80,0.2)" : th.cardBorder,
                 boxShadow: th.cardShadow,
                 opacity: !owned && !canAfford ? 0.55 : 1,
                 transition: "all 0.15s",
               }}
             >
+              {/* Bloom+ badge for premium items */}
+              {locked && (
+                <div style={{
+                  position: "absolute", top: 8, right: 8,
+                  padding: "2px 7px", borderRadius: 10,
+                  background: "rgba(74,222,128,0.12)",
+                  border: "1px solid rgba(74,222,128,0.2)",
+                  fontSize: 9, fontWeight: 700, color: "#4ade80",
+                  letterSpacing: "0.3px",
+                }}>
+                  Bloom+
+                </div>
+              )}
               {/* Sprite preview — 64px, pixelated */}
               <div style={{
                 width: 64, height: 64, margin: "0 auto 8px",
@@ -136,6 +152,21 @@ export function Shop({ coins, ownedItems, onBuy, onOwnedTap, th }: ShopProps) {
                 }}>
                   <Check size={11} /> Owned
                 </div>
+              ) : locked ? (
+                <button
+                  onClick={() => onPremiumTap?.()}
+                  style={{
+                    marginTop: 8, width: "100%", padding: "6px 0", borderRadius: 8,
+                    border: "1px solid rgba(74,222,128,0.15)", cursor: "pointer",
+                    fontFamily: "inherit", fontSize: 11, fontWeight: 600,
+                    background: "rgba(74,222,128,0.06)",
+                    color: "#4ade80",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 3,
+                    transition: "all 0.12s",
+                  }}
+                >
+                  <Coins size={10} />{item.price}
+                </button>
               ) : (
                 <button
                   onClick={() => canAfford && onBuy(item.id)}

@@ -43,7 +43,7 @@ export const HABIT_COLORS = [
   "#8b5cf6", "#ef4444", "#14b8a6", "#f97316", "#06b6d4",
 ];
 
-export const FREE_HABIT_LIMIT = 5;
+export const FREE_HABIT_LIMIT = 3;
 
 /* ═══════════ SEASONS ═══════════ */
 export type SeasonKey = "spring" | "summer" | "autumn" | "winter";
@@ -241,30 +241,30 @@ export const SHOP_CATEGORIES: { key: ShopCategory; label: string }[] = [
 ];
 
 export const SHOP_ITEMS: ShopItem[] = [
-  // Landscape
+  // Landscape (all free)
   { id: "pond", name: "Pond", description: "A small reflective pool", price: 30, category: "landscape" },
-  { id: "bridge", name: "Bridge", description: "A tiny wooden bridge", price: 40, category: "landscape" },
+  { id: "bridge", name: "Bridge", description: "A tiny wooden bridge", price: 40, category: "landscape", premium: true },
   { id: "bench", name: "Bench", description: "A cozy resting spot", price: 20, category: "landscape" },
   { id: "fence", name: "Fence", description: "A picket fence section", price: 15, category: "landscape" },
   { id: "stone-path", name: "Stone Path", description: "Stepping stones", price: 25, category: "landscape" },
 
-  // Trees
+  // Trees (Sakura free, rest premium)
   { id: "sakura", name: "Sakura", description: "Pink cherry blossoms", price: 60, category: "trees" },
-  { id: "pine", name: "Pine", description: "An evergreen pine tree", price: 45, category: "trees" },
-  { id: "willow", name: "Willow", description: "A graceful weeping willow", price: 55, category: "trees" },
-  { id: "oak", name: "Oak", description: "A sturdy old oak", price: 75, category: "trees" },
+  { id: "pine", name: "Pine", description: "An evergreen pine tree", price: 45, category: "trees", premium: true },
+  { id: "willow", name: "Willow", description: "A graceful weeping willow", price: 55, category: "trees", premium: true },
+  { id: "oak", name: "Oak", description: "A sturdy old oak", price: 75, category: "trees", premium: true },
 
-  // Flowers
+  // Flowers (all free)
   { id: "tulips", name: "Tulips", description: "A patch of colorful tulips", price: 10, category: "flowers" },
   { id: "sunflowers", name: "Sunflowers", description: "Tall golden sunflowers", price: 15, category: "flowers" },
   { id: "roses", name: "Roses", description: "A rose bush in bloom", price: 18, category: "flowers" },
   { id: "lavender", name: "Lavender", description: "Fragrant purple lavender", price: 12, category: "flowers" },
 
-  // Decorations
-  { id: "lantern", name: "Lantern", description: "A warm glowing lantern", price: 20, category: "decorations" },
-  { id: "mushrooms", name: "Mushrooms", description: "A cluster of spotted caps", price: 8, category: "decorations" },
-  { id: "rock-garden", name: "Rock Garden", description: "Zen stacked stones", price: 25, category: "decorations" },
-  { id: "birdhouse", name: "Birdhouse", description: "A tiny house on a pole", price: 18, category: "decorations" },
+  // Decorations (all premium)
+  { id: "lantern", name: "Lantern", description: "A warm glowing lantern", price: 20, category: "decorations", premium: true },
+  { id: "mushrooms", name: "Mushrooms", description: "A cluster of spotted caps", price: 8, category: "decorations", premium: true },
+  { id: "rock-garden", name: "Rock Garden", description: "Zen stacked stones", price: 25, category: "decorations", premium: true },
+  { id: "birdhouse", name: "Birdhouse", description: "A tiny house on a pole", price: 18, category: "decorations", premium: true },
 ];
 
 export function getHealKey(name: string): string {
