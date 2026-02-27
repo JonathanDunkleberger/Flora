@@ -22,6 +22,7 @@ import { UrgeTrend } from "@/components/urge-trend";
 import { RelapseModal } from "@/components/relapse-modal";
 import { ReasonEditor } from "@/components/reason-editor";
 import { Shop } from "@/components/shop";
+import { UrgeSupport } from "@/components/urge-support";
 import { BloomPlusScreen, BloomPlusMiniPrompt, SevenDayCelebration } from "@/components/bloom-plus-screen";
 import { getStage, getIcon, today, daysAgo, daysBetween, fmtDuration, fmtMoney, fmtQuitDate } from "@/lib/utils";
 import {
@@ -69,11 +70,10 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
   const [quitDataMap, setQuitDataMap] = useState<Record<string, QuitData>>({});
   const [breathingHabit, setBreathingHabit] = useState<HabitWithStats | null>(null);
   const [relapseHabit, setRelapseHabit] = useState<HabitWithStats | null>(null);
+  const [urgeSupportHabit, setUrgeSupportHabit] = useState<HabitWithStats | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [ownedItems, setOwnedItems] = useState<string[]>([]);
-  const [swipedId, setSwipedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const swipeRef = useRef<{ startX: number; id: string } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const editRef = useRef<HTMLInputElement>(null);
   const terRef = useRef<HTMLDivElement>(null);
@@ -681,6 +681,27 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
         />
       )}
 
+      {/* Urge support full screen */}
+      {urgeSupportHabit && (
+        <UrgeSupport
+          habit={urgeSupportHabit}
+          urgesToday={
+            Object.values(quitDataMap).reduce((sum, qd) => sum + (qd.urges || []).filter((d) => d === todayStr).length, 0)
+          }
+          onComplete={(data) => {
+            logUrge(urgeSupportHabit.id);
+            setCoins((p) => {
+              const nv = p + 3;
+              fetch("/api/coins", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ coins: nv }) }).catch(() => {});
+              return nv;
+            });
+            setUrgeSupportHabit(null);
+          }}
+          onClose={() => setUrgeSupportHabit(null)}
+          th={th}
+        />
+      )}
+
       {/* Relapse modal */}
       {relapseHabit && (
         <RelapseModal
@@ -981,7 +1002,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                   <p style={{ fontSize: 13, color: th.textMuted }}>Tap + to add your first habit</p>
                 </div>
               ) : (
-                habits.map((h) => {
+                habits.map((h, idx) => {
                   const quit = isQuit(h);
                   const done = !quit && isHappy(h.id);
                   const streak = quit ? 0 : getStreak(h.id);
@@ -989,39 +1010,13 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                   const cleanDays = quit ? getCleanDays(h.id) : 0;
                   const qd = quit ? getQuitData(h.id) : undefined;
                   const moneySaved = quit && qd ? (qd.dailyCost || 0) * cleanDays : 0;
-                  const isSwiped = swipedId === h.id;
+                  const isLast = idx === habits.length - 1;
                   return (
-                    <div key={h.id} style={{ position: "relative", overflow: "hidden", borderRadius: 10, animation: "fadeUp 0.3s ease" }}>
-                      {/* Delete action behind */}
-                      <div style={{
-                        position: "absolute", right: 0, top: 0, bottom: 0, width: 72,
-                        background: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center",
-                        borderRadius: "0 10px 10px 0",
-                      }}>
-                        <button onClick={() => { setSwipedId(null); setConfirmDeleteId(h.id); }} style={{
-                          background: "none", border: "none", color: "white", fontSize: 11,
-                          fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
-                          display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-                        }}>
-                          <X size={16} />Delete
-                        </button>
-                      </div>
-                      {/* Swipeable foreground row */}
-                      <div className="rw" style={{
-                        background: th.card,
-                        transform: isSwiped ? "translateX(-72px)" : "translateX(0)",
-                        transition: "transform 0.25s cubic-bezier(.16,1,.3,1)",
-                        position: "relative", zIndex: 1,
-                      }}
-                        onTouchStart={(e) => { swipeRef.current = { startX: e.touches[0].clientX, id: h.id }; }}
-                        onTouchMove={(e) => {
-                          if (!swipeRef.current || swipeRef.current.id !== h.id) return;
-                          const dx = swipeRef.current.startX - e.touches[0].clientX;
-                          if (dx > 40) setSwipedId(h.id);
-                          else if (dx < -20) setSwipedId(null);
-                        }}
-                        onTouchEnd={() => { swipeRef.current = null; }}
-                      >
+                    <div key={h.id} className="rw" style={{
+                      background: th.card, animation: "fadeUp 0.3s ease",
+                      borderBottom: isLast ? "none" : "1px solid rgba(255,255,255,0.04)",
+                      borderRadius: isLast ? undefined : 0,
+                    }}>
                         {quit ? (
                           /* Quit habit: green shield indicator */
                           <div
@@ -1071,13 +1066,10 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                             </div>
                           )}
                         </div>
-                        <div
-                          style={{ display: "flex", alignItems: "center", gap: 5 }}
-                          onClick={() => { setDetailId(h.id); setPage("detail"); }}
-                        >
+                        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                           {quit ? (
                             <button
-                              onClick={(e) => { e.stopPropagation(); logUrge(h.id); setCoinToast({ msg: "Urge resisted", icon: Wind }); }}
+                              onClick={(e) => { e.stopPropagation(); setUrgeSupportHabit(h); }}
                               style={{
                                 fontSize: 9, fontWeight: 700, padding: "3px 9px", borderRadius: 100,
                                 background: `${h.color}12`, color: h.color,
@@ -1101,7 +1093,22 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                             </>
                           )}
                         </div>
-                      </div>
+                        {/* Gray × delete */}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(h.id); }}
+                          style={{
+                            background: "none", border: "none", cursor: "pointer",
+                            width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center",
+                            color: "rgba(255,255,255,0.15)", fontSize: 14, fontWeight: 400,
+                            flexShrink: 0, padding: 0, marginLeft: 2, lineHeight: 1,
+                            transition: "color 0.15s",
+                          }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.15)")}
+                          aria-label={`Remove ${h.name}`}
+                        >
+                          <X size={12} />
+                        </button>
                     </div>
                   );
                 })
@@ -1577,8 +1584,11 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
               if (!quits.length) return null;
               return (
                 <div style={{ marginBottom: 12 }}>
-                  <div className="lb" style={{ marginBottom: 5, color: th.label, display: "flex", alignItems: "center", gap: 4 }}>
+                  <div className="lb" style={{ marginBottom: 2, color: th.label, display: "flex", alignItems: "center", gap: 4 }}>
                     <Shield size={10} /> Quit a habit
+                  </div>
+                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 2, marginBottom: 8 }}>
+                    Tap to add. You can rename any habit.
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                     {quits.map((p) => {
@@ -1693,10 +1703,10 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
               width: "100%", textAlign: "center",
             }}>
               <div style={{ fontSize: 18, fontWeight: 700, color: th.text, marginBottom: 4 }}>
-                Remove Habit?
+                Remove &ldquo;{habit?.name}&rdquo;?
               </div>
               <div style={{ fontSize: 13, color: th.textSub, lineHeight: 1.5, marginBottom: 20 }}>
-                &ldquo;{habit?.name}&rdquo; and all its data will be removed. You can undo this right after.
+                Your creature and all progress for this habit will be permanently deleted.
               </div>
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={() => setConfirmDeleteId(null)} style={{
@@ -1706,7 +1716,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 }}>Cancel</button>
                 <button onClick={() => { removeHabit(confirmDeleteId); setConfirmDeleteId(null); }} style={{
                   flex: 1, padding: "10px 0", borderRadius: 10, border: "none",
-                  background: "#ef4444", color: "white", fontSize: 14, fontWeight: 600,
+                  background: "transparent", color: "#ef4444", fontSize: 14, fontWeight: 600,
                   cursor: "pointer", fontFamily: "inherit",
                 }}>Remove</button>
               </div>

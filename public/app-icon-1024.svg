@@ -1,90 +1,45 @@
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#0f1628"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#131B2E"/>
       <stop offset="100%" stop-color="#0a0e18"/>
     </linearGradient>
-    <linearGradient id="planet" x1="0.3" y1="0" x2="0.7" y2="1">
-      <stop offset="0%" stop-color="#6BCB77"/>
-      <stop offset="40%" stop-color="#4CAF50"/>
-      <stop offset="100%" stop-color="#2E7D32"/>
-    </linearGradient>
-    <radialGradient id="shine" cx="0.35" cy="0.3" r="0.6">
-      <stop offset="0%" stop-color="rgba(255,255,255,0.12)"/>
-      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    <radialGradient id="glow" cx="0.65" cy="0.62" r="0.25">
+      <stop offset="0%" stop-color="#4ade80" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#4ade80" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <!-- Background (no rounded corners - iOS adds them) -->
+  <!-- Background — no rounded corners, iOS adds them -->
   <rect width="1024" height="1024" fill="url(#bg)"/>
-  
-  <!-- Stars -->
-  <circle cx="180" cy="200" r="2" fill="white" opacity="0.4"/>
-  <circle cx="820" cy="150" r="2.5" fill="white" opacity="0.5"/>
-  <circle cx="140" cy="500" r="1.5" fill="white" opacity="0.3"/>
-  <circle cx="880" cy="420" r="2" fill="white" opacity="0.35"/>
-  <circle cx="300" cy="120" r="1.5" fill="white" opacity="0.25"/>
-  <circle cx="750" cy="280" r="2" fill="white" opacity="0.3"/>
-  <circle cx="200" cy="700" r="1.5" fill="white" opacity="0.2"/>
-  <circle cx="850" cy="650" r="2" fill="white" opacity="0.25"/>
-  <circle cx="500" cy="100" r="2" fill="white" opacity="0.35"/>
-  <circle cx="650" cy="180" r="1.5" fill="white" opacity="0.3"/>
-  <circle cx="100" cy="350" r="2" fill="white" opacity="0.2"/>
-  <circle cx="920" cy="300" r="1.5" fill="white" opacity="0.25"/>
-  
-  <!-- Planet glow -->
-  <circle cx="512" cy="580" r="380" fill="#4CAF50" opacity="0.08"/>
-  
-  <!-- Planet -->
-  <circle cx="512" cy="620" r="320" fill="url(#planet)"/>
-  <circle cx="512" cy="620" r="320" fill="url(#shine)"/>
-  
-  <!-- Surface texture -->
-  <circle cx="420" cy="560" r="45" fill="rgba(0,80,0,0.12)"/>
-  <circle cx="600" cy="650" r="35" fill="rgba(0,80,0,0.08)"/>
-  <circle cx="480" cy="720" r="25" fill="rgba(0,80,0,0.1)"/>
-  
-  <!-- Atmosphere rim -->
-  <circle cx="512" cy="620" r="320" fill="none" stroke="rgba(150,255,150,0.15)" stroke-width="3"/>
-  <circle cx="512" cy="620" r="324" fill="none" stroke="rgba(150,255,150,0.08)" stroke-width="2"/>
-  
-  <!-- Grass tufts -->
-  <line x1="350" y1="398" x2="342" y2="378" stroke="#5a9e5a" stroke-width="4" stroke-linecap="round"/>
-  <line x1="356" y1="400" x2="360" y2="380" stroke="#4a8e4a" stroke-width="3" stroke-linecap="round"/>
-  <line x1="670" y1="405" x2="678" y2="385" stroke="#5a9e5a" stroke-width="4" stroke-linecap="round"/>
-  <line x1="664" y1="407" x2="656" y2="388" stroke="#4a8e4a" stroke-width="3" stroke-linecap="round"/>
-  
-  <!-- Flowers -->
-  <circle cx="420" cy="365" r="6" fill="#ff9ecd"/>
-  <circle cx="420" cy="365" r="2.5" fill="#ffe082"/>
-  <circle cx="620" cy="380" r="5" fill="#90caf9"/>
-  <circle cx="620" cy="380" r="2" fill="#fff59d"/>
-  
-  <!-- CREATURE -->
-  <g transform="translate(512, 285)">
-    <!-- Body -->
-    <ellipse cx="0" cy="0" rx="52" ry="48" fill="#FFD93D"/>
-    <ellipse cx="-8" cy="-8" rx="30" ry="26" fill="rgba(255,255,255,0.15)"/>
-    <!-- Eyes -->
-    <ellipse cx="-18" cy="-8" rx="14" ry="15" fill="white"/>
-    <ellipse cx="18" cy="-8" rx="14" ry="15" fill="white"/>
-    <circle cx="-14" cy="-6" r="8" fill="#2d2d2d"/>
-    <circle cx="22" cy="-6" r="8" fill="#2d2d2d"/>
-    <!-- Eye shine -->
-    <circle cx="-17" cy="-10" r="3.5" fill="white"/>
-    <circle cx="19" cy="-10" r="3.5" fill="white"/>
-    <!-- Blush -->
-    <ellipse cx="-30" cy="8" rx="10" ry="6" fill="rgba(255,150,150,0.35)"/>
-    <ellipse cx="30" cy="8" rx="10" ry="6" fill="rgba(255,150,150,0.35)"/>
-    <!-- Mouth -->
-    <path d="M-8 12 Q0 22 8 12" fill="none" stroke="#2d2d2d" stroke-width="3" stroke-linecap="round"/>
-    <!-- Leaf on head -->
-    <ellipse cx="5" cy="-44" rx="10" ry="5" fill="#6BCB77" transform="rotate(-20, 5, -44)"/>
-    <line x1="0" y1="-38" x2="5" y2="-46" stroke="#4CAF50" stroke-width="2"/>
+  <!-- Subtle green glow around the dot area -->
+  <rect width="1024" height="1024" fill="url(#glow)"/>
+  <!-- Subtle grid texture -->
+  <g opacity="0.035">
+    <circle cx="200" cy="200" r="2.5" fill="white"/>
+    <circle cx="400" cy="200" r="2.5" fill="white"/>
+    <circle cx="600" cy="200" r="2.5" fill="white"/>
+    <circle cx="800" cy="200" r="2.5" fill="white"/>
+    <circle cx="200" cy="400" r="2.5" fill="white"/>
+    <circle cx="400" cy="400" r="2.5" fill="white"/>
+    <circle cx="600" cy="400" r="2.5" fill="white"/>
+    <circle cx="800" cy="400" r="2.5" fill="white"/>
+    <circle cx="200" cy="600" r="2.5" fill="white"/>
+    <circle cx="400" cy="600" r="2.5" fill="white"/>
+    <circle cx="600" cy="600" r="2.5" fill="white"/>
+    <circle cx="800" cy="600" r="2.5" fill="white"/>
+    <circle cx="200" cy="800" r="2.5" fill="white"/>
+    <circle cx="400" cy="800" r="2.5" fill="white"/>
+    <circle cx="600" cy="800" r="2.5" fill="white"/>
+    <circle cx="800" cy="800" r="2.5" fill="white"/>
   </g>
-  
-  <!-- Moon -->
-  <circle cx="820" cy="180" r="45" fill="#f5f0e0" opacity="0.9"/>
-  <circle cx="808" cy="170" r="6" fill="rgba(0,0,0,0.06)"/>
-  <circle cx="835" cy="190" r="4" fill="rgba(0,0,0,0.05)"/>
-  <circle cx="815" cy="200" r="3" fill="rgba(0,0,0,0.04)"/>
+  <!-- "b" letterform -->
+  <text x="230" y="745" font-family="Georgia, 'Times New Roman', serif" font-size="680" font-weight="700" fill="#e8e6f0" letter-spacing="-15">b</text>
+  <!-- Green dot with leaf detail -->
+  <g transform="translate(730, 648)">
+    <circle cx="0" cy="0" r="46" fill="#4ade80"/>
+    <!-- Leaf detail inside dot -->
+    <ellipse cx="5" cy="-9" rx="16" ry="7.5" fill="#6ee7a0" transform="rotate(-30, 5, -9)"/>
+    <!-- Tiny stem -->
+    <line x1="0" y1="-2" x2="4" y2="-10" stroke="#3ec472" stroke-width="2" stroke-linecap="round"/>
+  </g>
 </svg>

@@ -1,44 +1,33 @@
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-  <rect width="512" height="512" rx="114" fill="#0f1628"/>
-  <circle cx="90" cy="90" r="2" fill="white" opacity="0.3"/>
-  <circle cx="430" cy="75" r="2.5" fill="white" opacity="0.4"/>
-  <circle cx="70" cy="240" r="1.5" fill="white" opacity="0.2"/>
-  <circle cx="450" cy="200" r="2" fill="white" opacity="0.3"/>
-  <circle cx="250" cy="55" r="1.5" fill="white" opacity="0.25"/>
-  <circle cx="380" cy="100" r="1.8" fill="white" opacity="0.2"/>
-  <circle cx="256" cy="310" r="160" fill="#4CAF50"/>
-  <circle cx="220" cy="280" r="22" fill="rgba(0,80,0,0.12)"/>
-  <circle cx="300" cy="330" r="16" fill="rgba(0,80,0,0.08)"/>
-  <circle cx="240" cy="360" r="12" fill="rgba(0,80,0,0.1)"/>
-  <circle cx="256" cy="310" r="160" fill="none" stroke="rgba(150,255,150,0.15)" stroke-width="2"/>
-  <circle cx="256" cy="310" r="163" fill="none" stroke="rgba(150,255,150,0.08)" stroke-width="1"/>
-  <!-- Grass tufts -->
-  <line x1="175" y1="198" x2="170" y2="185" stroke="#5a9e5a" stroke-width="3" stroke-linecap="round"/>
-  <line x1="180" y1="200" x2="185" y2="187" stroke="#4a8e4a" stroke-width="2.5" stroke-linecap="round"/>
-  <line x1="340" y1="202" x2="345" y2="189" stroke="#5a9e5a" stroke-width="3" stroke-linecap="round"/>
-  <!-- Flowers -->
-  <circle cx="210" cy="185" r="4" fill="#ff9ecd"/>
-  <circle cx="210" cy="185" r="1.8" fill="#ffe082"/>
-  <circle cx="310" cy="192" r="3.5" fill="#90caf9"/>
-  <circle cx="310" cy="192" r="1.5" fill="#fff59d"/>
-  <!-- Creature -->
-  <g transform="translate(256, 142)">
-    <ellipse cx="0" cy="0" rx="30" ry="27" fill="#FFD93D"/>
-    <ellipse cx="-5" cy="-5" rx="17" ry="15" fill="rgba(255,255,255,0.12)"/>
-    <ellipse cx="-10" cy="-5" rx="8" ry="9" fill="white"/>
-    <ellipse cx="10" cy="-5" rx="8" ry="9" fill="white"/>
-    <circle cx="-8" cy="-3.5" r="4.5" fill="#2d2d2d"/>
-    <circle cx="12" cy="-3.5" r="4.5" fill="#2d2d2d"/>
-    <circle cx="-10" cy="-6" r="2" fill="white"/>
-    <circle cx="10" cy="-6" r="2" fill="white"/>
-    <ellipse cx="-17" cy="4" rx="5.5" ry="3.5" fill="rgba(255,150,150,0.3)"/>
-    <ellipse cx="17" cy="4" rx="5.5" ry="3.5" fill="rgba(255,150,150,0.3)"/>
-    <path d="M-5 8 Q0 14 5 8" fill="none" stroke="#2d2d2d" stroke-width="2" stroke-linecap="round"/>
-    <ellipse cx="3" cy="-26" rx="7" ry="3.5" fill="#6BCB77" transform="rotate(-20, 3, -26)"/>
-    <line x1="0" y1="-22" x2="3" y2="-27" stroke="#4CAF50" stroke-width="1.2"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#0a0e18"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="114" fill="url(#bg)"/>
+  <!-- Subtle grid texture -->
+  <g opacity="0.04">
+    <circle cx="100" cy="100" r="1.5" fill="white"/>
+    <circle cx="200" cy="100" r="1.5" fill="white"/>
+    <circle cx="300" cy="100" r="1.5" fill="white"/>
+    <circle cx="400" cy="100" r="1.5" fill="white"/>
+    <circle cx="100" cy="200" r="1.5" fill="white"/>
+    <circle cx="200" cy="200" r="1.5" fill="white"/>
+    <circle cx="300" cy="200" r="1.5" fill="white"/>
+    <circle cx="400" cy="200" r="1.5" fill="white"/>
+    <circle cx="100" cy="300" r="1.5" fill="white"/>
+    <circle cx="200" cy="300" r="1.5" fill="white"/>
+    <circle cx="300" cy="300" r="1.5" fill="white"/>
+    <circle cx="400" cy="300" r="1.5" fill="white"/>
+    <circle cx="100" cy="400" r="1.5" fill="white"/>
+    <circle cx="200" cy="400" r="1.5" fill="white"/>
+    <circle cx="300" cy="400" r="1.5" fill="white"/>
+    <circle cx="400" cy="400" r="1.5" fill="white"/>
   </g>
-  <!-- Moon -->
-  <circle cx="420" cy="100" r="25" fill="#f5f0e0" opacity="0.8"/>
-  <circle cx="413" cy="93" r="3.5" fill="rgba(0,0,0,0.06)"/>
-  <circle cx="428" cy="105" r="2.5" fill="rgba(0,0,0,0.05)"/>
+  <!-- "b" letterform -->
+  <text x="118" y="375" font-family="Georgia, 'Times New Roman', serif" font-size="340" font-weight="700" fill="#e8e6f0">b</text>
+  <!-- Green dot with leaf -->
+  <circle cx="368" cy="328" r="24" fill="#4ade80"/>
+  <ellipse cx="372" cy="320" rx="10" ry="5" fill="#6ee7a0" transform="rotate(-30, 372, 320)"/>
 </svg>

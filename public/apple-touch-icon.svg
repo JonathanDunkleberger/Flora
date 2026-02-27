@@ -1,23 +1,31 @@
 <svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
-  <rect width="180" height="180" rx="40" fill="#0f1628"/>
-  <circle cx="30" cy="30" r="1" fill="white" opacity="0.3"/>
-  <circle cx="155" cy="25" r="1.2" fill="white" opacity="0.4"/>
-  <circle cx="20" cy="80" r="0.8" fill="white" opacity="0.2"/>
-  <circle cx="165" cy="70" r="1" fill="white" opacity="0.3"/>
-  <circle cx="90" cy="112" r="58" fill="#4CAF50"/>
-  <circle cx="80" cy="104" r="8" fill="rgba(0,80,0,0.12)"/>
-  <circle cx="105" cy="118" r="6" fill="rgba(0,80,0,0.08)"/>
-  <circle cx="90" cy="112" r="58" fill="none" stroke="rgba(150,255,150,0.15)" stroke-width="1"/>
-  <g transform="translate(90, 50)">
-    <ellipse cx="0" cy="0" rx="16" ry="14" fill="#FFD93D"/>
-    <ellipse cx="-5.5" cy="-3" rx="4.5" ry="5" fill="white"/>
-    <ellipse cx="5.5" cy="-3" rx="4.5" ry="5" fill="white"/>
-    <circle cx="-4.5" cy="-2" r="2.8" fill="#2d2d2d"/>
-    <circle cx="6.5" cy="-2" r="2.8" fill="#2d2d2d"/>
-    <circle cx="-5.5" cy="-4" r="1.2" fill="white"/>
-    <circle cx="5.5" cy="-4" r="1.2" fill="white"/>
-    <path d="M-3 5 Q0 9 3 5" fill="none" stroke="#2d2d2d" stroke-width="1.2" stroke-linecap="round"/>
-    <ellipse cx="2" cy="-14" rx="4" ry="2" fill="#6BCB77" transform="rotate(-15, 2, -14)"/>
-  </g>
-  <circle cx="150" cy="30" r="10" fill="#f5f0e0" opacity="0.8"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#0a0e18"/>
+    </linearGradient>
+  </defs>
+  <rect width="180" height="180" rx="40" fill="url(#bg)"/>
+  <!-- Subtle texture dots -->
+  <circle cx="36" cy="36" r="0.5" fill="white" opacity="0.04"/>
+  <circle cx="72" cy="36" r="0.5" fill="white" opacity="0.04"/>
+  <circle cx="108" cy="36" r="0.5" fill="white" opacity="0.04"/>
+  <circle cx="144" cy="36" r="0.5" fill="white" opacity="0.04"/>
+  <circle cx="36" cy="72" r="0.5" fill="white" opacity="0.04"/>
+  <circle cx="72" cy="72" r="0.5" fill="white" opacity="0.04"/>
+  <circle cx="108" cy="72" r="0.5" fill="white" opacity="0.04"/>
+  <circle cx="144" cy="72" r="0.5" fill="white" opacity="0.04"/>
+  <circle cx="36" cy="108" r="0.5" fill="white" opacity="0.04"/>
+  <circle cx="72" cy="108" r="0.5" fill="white" opacity="0.04"/>
+  <circle cx="108" cy="108" r="0.5" fill="white" opacity="0.04"/>
+  <circle cx="144" cy="108" r="0.5" fill="white" opacity="0.04"/>
+  <circle cx="36" cy="144" r="0.5" fill="white" opacity="0.04"/>
+  <circle cx="72" cy="144" r="0.5" fill="white" opacity="0.04"/>
+  <circle cx="108" cy="144" r="0.5" fill="white" opacity="0.04"/>
+  <circle cx="144" cy="144" r="0.5" fill="white" opacity="0.04"/>
+  <!-- "b" letterform -->
+  <text x="42" y="132" font-family="Georgia, 'Times New Roman', serif" font-size="120" font-weight="700" fill="#e8e6f0">b</text>
+  <!-- Green dot with leaf detail -->
+  <circle cx="130" cy="116" r="12" fill="#4ade80"/>
+  <ellipse cx="132.5" cy="112" rx="5" ry="2.5" fill="#6ee7a0" transform="rotate(-30, 132.5, 112)"/>
 </svg>

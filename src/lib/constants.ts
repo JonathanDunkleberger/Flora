@@ -168,12 +168,15 @@ export function getSynergyName(a: string, b: string): string | null {
 
 /* ═══════════ QUIT PRESETS ═══════════ */
 export const QUIT_PRESETS = [
-  { name: "No cannabis", iconName: "Cigarette", color: "#27ae60", cost: 15 },
-  { name: "No juul", iconName: "Wind", color: "#607d8b", cost: 8 },
-  { name: "No alcohol", iconName: "Wine", color: "#8e44ad", cost: 12 },
-  { name: "No porn", iconName: "Eye", color: "#e74c3c", cost: 0 },
-  { name: "No doom scrolling", iconName: "Smartphone", color: "#95a5a6", cost: 0 },
-  { name: "No junk food", iconName: "Utensils", color: "#f39c12", cost: 6 },
+  { name: "Smoke-free", iconName: "Cigarette", color: "#27ae60", cost: 15 },
+  { name: "Nicotine-free", iconName: "Wind", color: "#607d8b", cost: 8 },
+  { name: "Alcohol-free", iconName: "Wine", color: "#8e44ad", cost: 12 },
+  { name: "Content-free", iconName: "Eye", color: "#e74c3c", cost: 0 },
+  { name: "Mindful scrolling", iconName: "Smartphone", color: "#95a5a6", cost: 0 },
+  { name: "Clean eating", iconName: "Utensils", color: "#f39c12", cost: 6 },
+  { name: "No gambling", iconName: "Target", color: "#d35400", cost: 20 },
+  { name: "Screen time limit", iconName: "Clock", color: "#455a64", cost: 0 },
+  { name: "No energy drinks", iconName: "Coffee", color: "#e67e22", cost: 5 },
 ] as const;
 
 /* ═══════════ HEALING TIMELINES ═══════════ */
@@ -269,9 +272,9 @@ export const SHOP_ITEMS: ShopItem[] = [
 
 export function getHealKey(name: string): string {
   const n = name.toLowerCase();
-  if (n.includes("cannabis") || n.includes("weed") || n.includes("thc") || n.includes("marijuana")) return "cannabis";
+  if (n.includes("cannabis") || n.includes("weed") || n.includes("thc") || n.includes("marijuana") || n.includes("smoke-free")) return "cannabis";
   if (n.includes("juul") || n.includes("nicotine") || n.includes("vape") || n.includes("cigarette") || n.includes("smoking")) return "nicotine";
   if (n.includes("alcohol") || n.includes("drinking") || n.includes("booze") || n.includes("beer") || n.includes("wine")) return "alcohol";
-  if (n.includes("porn") || n.includes("fap") || n.includes("nofap")) return "porn";
+  if (n.includes("porn") || n.includes("fap") || n.includes("nofap") || n.includes("content-free")) return "porn";
   return "default";
 }
