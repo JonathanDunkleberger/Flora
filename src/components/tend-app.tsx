@@ -2269,7 +2269,18 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
                 </button>
               </div>
               {addError && (
-                <div style={{ marginTop: 8, color: th.textMuted, fontSize: 12, fontWeight: 500 }}>{addError}</div>
+                <div
+                  onClick={() => { if (habits.length >= FREE_HABIT_LIMIT && !isTendPlus()) { setPage("main"); setShowPaywall(true); } }}
+                  style={{
+                    marginTop: 8, fontSize: 12, fontWeight: 500, lineHeight: 1.5,
+                    color: habits.length >= FREE_HABIT_LIMIT && !isTendPlus() ? "#4ade80" : th.textMuted,
+                    cursor: habits.length >= FREE_HABIT_LIMIT && !isTendPlus() ? "pointer" : "default",
+                  }}
+                >
+                  {habits.length >= FREE_HABIT_LIMIT && !isTendPlus()
+                    ? "Unlock unlimited habits with Tend+ →"
+                    : addError}
+                </div>
               )}
             </div>
           </div>
