@@ -36,7 +36,7 @@ export const MILESTONES: { days: number; coins: number; label: string; iconName:
 ];
 
 export const STAGE_LABELS = ["Egg", "Hatchling", "Young", "Growing", "Evolved"];
-export const STAGE_THRESHOLDS = [0, 1, 5, 12, 25];
+export const STAGE_THRESHOLDS = [0, 3, 7, 14, 30];
 
 export const HABIT_COLORS = [
   "#6366f1", "#ec4899", "#f59e0b", "#10b981", "#3b82f6",

@@ -12,9 +12,10 @@ interface GalleryProps {
   getTotal: (id: string) => number;
   isHappy: (id: string) => boolean;
   th: ThemeColors;
+  onCreatureTap?: (habitId: string) => void;
 }
 
-export function Gallery({ habits, getStage, getTotal, isHappy, th }: GalleryProps) {
+export function Gallery({ habits, getStage, getTotal, isHappy, th, onCreatureTap }: GalleryProps) {
   const allCreatures = habits.map((h) => ({
     ...h,
     stage: getStage(h.id),
@@ -66,11 +67,13 @@ export function Gallery({ habits, getStage, getTotal, isHappy, th }: GalleryProp
             <div
               key={c.id}
               className="cd"
+              onClick={() => onCreatureTap?.(c.id)}
               style={{
                 padding: 16, textAlign: "center",
                 background: th.card, borderColor: th.cardBorder, boxShadow: th.cardShadow,
                 border: `1.5px solid ${c.stage >= 4 ? "rgba(255,215,0,.2)" : th.cardBorder}`,
                 position: "relative", overflow: "hidden",
+                cursor: onCreatureTap ? "pointer" : "default",
               }}
             >
               {c.stage >= 4 && (

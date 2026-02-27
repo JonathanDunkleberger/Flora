@@ -26,10 +26,10 @@ export function getIcon(name: string): LucideIcon {
 }
 
 export function getStage(totalDays: number): number {
-  if (totalDays >= 25) return 4;
-  if (totalDays >= 12) return 3;
-  if (totalDays >= 5) return 2;
-  if (totalDays >= 1) return 1;
+  if (totalDays >= 30) return 4;
+  if (totalDays >= 14) return 3;
+  if (totalDays >= 7) return 2;
+  if (totalDays >= 3) return 1;
   return 0;
 }
 
@@ -70,8 +70,9 @@ export function lightenColor(hex: string, amt: number): string {
 }
 
 export function daysBetween(a: string, b: string): number {
-  const d1 = new Date(a + "T12:00:00");
-  const d2 = new Date(b + "T12:00:00");
+  // Handle both ISO timestamps and date-only strings
+  const d1 = a.includes("T") ? new Date(a) : new Date(a + "T12:00:00");
+  const d2 = b.includes("T") ? new Date(b) : new Date(b + "T12:00:00");
   return Math.max(0, Math.floor((d2.getTime() - d1.getTime()) / 86400000));
 }
 
@@ -89,6 +90,53 @@ export function fmtDuration(days: number): string {
   return r > 0 ? `${m}mo ${r}d` : `${m} month${m > 1 ? "s" : ""}`;
 }
 
+/** Format days completed text with proper singular/plural */
+export function fmtDaysCompleted(days: number, isQuit: boolean): string {
+  if (isQuit && days === 0) return "Just started";
+  if (days === 0) return "Starting today";
+  if (days === 1) return "1 day completed";
+  return `${days} days completed`;
+}
+
 export function fmtMoney(n: number): string {
   return n >= 100 ? `$${Math.floor(n)}` : `$${n.toFixed(2)}`;
+}
+
+/** Format a quit date (ISO timestamp or date string) for display */
+export function fmtQuitDate(isoStr: string): string {
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return "";
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffHrs = diffMs / (1000 * 60 * 60);
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+  const timeStr = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+
+  // Same calendar day
+  if (d.toDateString() === now.toDateString()) {
+    if (diffHrs < 1) return `Started ${Math.max(1, Math.round(diffMs / 60000))}m ago`;
+    return `Started today at ${timeStr}`;
+  }
+
+  // Within 24 hours
+  if (diffHrs < 24) {
+    return `Started ${Math.round(diffHrs)}h ago`;
+  }
+
+  // Yesterday or older
+  const monthDay = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return `Started ${monthDay} at ${timeStr}`;
+}
+
+/** Format a relative time for quit habits in the first 24h */
+export function fmtQuitRelative(isoStr: string): string {
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return "";
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffHrs = diffMs / (1000 * 60 * 60);
+  if (diffHrs < 1) return `${Math.max(1, Math.round(diffMs / 60000))} minutes ago`;
+  if (diffHrs < 24) return `${Math.round(diffHrs)} hours ago`;
+  return "";
 }

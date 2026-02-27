@@ -22,7 +22,7 @@ import { UrgeTrend } from "@/components/urge-trend";
 import { RelapseModal } from "@/components/relapse-modal";
 import { ReasonEditor } from "@/components/reason-editor";
 import { Shop } from "@/components/shop";
-import { getStage, getIcon, today, daysAgo, daysBetween, fmtDuration, fmtMoney } from "@/lib/utils";
+import { getStage, getIcon, today, daysAgo, daysBetween, fmtDuration, fmtMoney, fmtQuitDate } from "@/lib/utils";
 import {
   MILESTONES, STAGE_LABELS, STAGE_THRESHOLDS,
   PRESETS, PRESET_CATEGORIES, HABIT_COLORS,
@@ -192,9 +192,10 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
       const currentClean = getCleanDays(hId);
       const prevBest = qd?.bestStreak ?? 0;
       const newBest = Math.max(currentClean, prevBest);
-      updateQuitData(hId, { quitDate: todayStr, bestStreak: newBest });
+      // Store exact ISO timestamp so "Started today at 6:04 PM" works
+      updateQuitData(hId, { quitDate: new Date().toISOString(), bestStreak: newBest });
     },
-    [updateQuitData, todayStr, quitDataMap, getCleanDays]
+    [updateQuitData, quitDataMap, getCleanDays]
   );
 
   const updateReason = useCallback(
@@ -428,7 +429,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
         ]);
         // Initialise quit data for quit habits
         if (cat === "quit") {
-          updateQuitData(newHabit.id, { quitDate: todayStr, dailyCost, reason: "", urges: [], bestStreak: 0 });
+          updateQuitData(newHabit.id, { quitDate: new Date().toISOString(), dailyCost, reason: "", urges: [], bestStreak: 0 });
         }
         setPage("main");
         setCName("");
@@ -691,7 +692,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
               </div>
               {[
                 { label: "Collection", Icon: LayoutGrid, color: th.textSub, action: () => { setPage("gallery"); setMenuOpen(false); } },
-                { label: "Constellation", Icon: Sparkles, color: "#8B5CF6", action: () => { setPage("constellation"); setMenuOpen(false); } },
+                { label: "Insights", Icon: Sparkles, color: "#8B5CF6", action: () => { setPage("constellation"); setMenuOpen(false); } },
                 { label: "Bloom Together", Icon: Users, color: "#4caf50", action: () => { setPage("social"); setMenuOpen(false); } },
                 { label: "World Shop", Icon: Store, color: "#f59e0b", action: () => { setPage("shop"); setMenuOpen(false); } },
                 { label: darkMode ? "Light Mode" : "Dark Mode", Icon: darkMode ? Sun : Moon, color: th.textSub, action: () => { setDarkMode((d) => !d); setMenuOpen(false); } },
@@ -735,6 +736,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 habits={habits} getStage={getStageForId} isHappy={isHappy}
                 pct={todayPct} bouncingId={bouncingId} season={season} darkMode={darkMode}
                 ownedItems={ownedItems}
+                onCreatureTap={(hId) => { setDetailId(hId); setPage("detail"); }}
               />
               {/* Mood indicator — minimal pill with SVG icon */}
               {habits.length > 0 && (() => {
@@ -897,7 +899,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                         onTouchEnd={() => { swipeRef.current = null; }}
                       >
                         {quit ? (
-                          /* Quit habit: green dot indicator */
+                          /* Quit habit: green shield indicator */
                           <div
                             style={{
                               width: 26, height: 26, borderRadius: 8,
@@ -906,11 +908,9 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                             }}
                             onClick={() => { setDetailId(h.id); setPage("detail"); }}
                           >
-                            <div style={{
-                              width: 6, height: 6, borderRadius: "50%",
-                              background: "#4caf50",
-                              boxShadow: "0 0 6px rgba(76,175,80,0.5)",
-                            }} />
+                            <svg viewBox="0 0 20 20" fill="#4ade80" width="20" height="20">
+                              <path d="M10 1L3 4.5V9.5C3 14.2 6 17.5 10 19C14 17.5 17 14.2 17 9.5V4.5L10 1Z"/>
+                            </svg>
                           </div>
                         ) : (
                           <div
@@ -938,7 +938,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                           </span>
                           {quit && qd?.quitDate && (
                             <div style={{ fontSize: 11, color: darkMode ? "rgba(255,255,255,0.25)" : "rgba(0,0,0,0.3)", fontWeight: 500, marginTop: 1 }}>
-                              {cleanDays === 0 ? "Starting today" : cleanDays === 1 ? "1 day clean" : `${fmtDuration(cleanDays)} clean`}{moneySaved > 0 && <span style={{ color: "#4caf50", marginLeft: 4 }}>{"\u00b7"} {fmtMoney(moneySaved)} saved</span>}
+                              {cleanDays === 0 ? "Just started" : cleanDays === 1 ? "1 day clean" : `${fmtDuration(cleanDays)} clean`}{moneySaved > 0 && <span style={{ color: "#4caf50", marginLeft: 4 }}>{"\u00b7"} {fmtMoney(moneySaved)} saved</span>}
                             </div>
                           )}
                           {!quit && streak > 0 && (
@@ -1016,18 +1016,21 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                 .sort((a, b) => a.remaining - b.remaining)[0];
               if (!closest || closest.remaining > 10) return null;
               return (
-                <div style={{
+                <div
+                  onClick={() => { setDetailId(closest.h.id); setPage("detail"); }}
+                  style={{
                   marginTop: 8, padding: "10px 14px", borderRadius: 12,
                   background: `linear-gradient(135deg,${closest.h.color}06,rgba(255,215,0,0.03))`,
                   border: `1px solid ${closest.h.color}15`,
                   display: "flex", alignItems: "center", gap: 10,
+                  cursor: "pointer",
                 }}>
                   <div style={{ position: "relative" }}>
                     <Creature stage={closest.stage} color={closest.h.color} happy={true} size={32} />
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 11, fontWeight: 600, color: th.text }}>
-                      {closest.h.name} evolves in <span style={{ color: closest.h.color }}>{closest.remaining} days</span>
+                      {closest.h.name} evolves in <span style={{ color: closest.h.color }}>{closest.remaining} {closest.remaining === 1 ? "day" : "days"}</span>
                     </div>
                     <div style={{ fontSize: 10, color: th.textSub }}>
                       {STAGE_LABELS[closest.stage]} → {STAGE_LABELS[closest.stage + 1]}
@@ -1124,16 +1127,36 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                   <p style={{ fontSize: 11, color: th.textSub, marginTop: 2 }}>
                     {dq ? `Quitting · ${STAGE_LABELS[getStageForId(detailHabit.id)]}` : `Building · ${STAGE_LABELS[getStageForId(detailHabit.id)]}`}
                   </p>
+                  {dq && dqd?.quitDate && (
+                    <p style={{ fontSize: 10, color: th.textFaint, marginTop: 1 }}>
+                      {fmtQuitDate(dqd.quitDate)}
+                    </p>
+                  )}
                 </>
               )}
 
               {/* Quit hero numbers */}
               {dq && !editMode && (
                 <div style={{ marginTop: 14 }}>
-                  <div style={{ fontFamily: "'Fraunces',serif", fontSize: 52, fontWeight: 700, color: detailHabit.color, letterSpacing: "-1px", lineHeight: 1 }}>
-                    {cleanD}
-                  </div>
-                  <div style={{ fontSize: 12, color: th.textMuted, fontWeight: 500, marginTop: 2 }}>days clean</div>
+                  {cleanD === 0 ? (
+                    <>
+                      <div style={{ fontFamily: "'Fraunces',serif", fontSize: 28, fontWeight: 600, color: detailHabit.color, lineHeight: 1.2 }}>
+                        Just started
+                      </div>
+                      <div style={{ fontSize: 12, color: th.textMuted, fontWeight: 500, marginTop: 4 }}>
+                        you got this
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontFamily: "'Fraunces',serif", fontSize: 52, fontWeight: 700, color: detailHabit.color, letterSpacing: "-1px", lineHeight: 1 }}>
+                        {cleanD}
+                      </div>
+                      <div style={{ fontSize: 12, color: th.textMuted, fontWeight: 500, marginTop: 2 }}>
+                        {cleanD === 1 ? "day clean" : "days clean"}
+                      </div>
+                    </>
+                  )}
                   {cleanD > 0 && (
                     <div style={{ fontSize: 11, color: th.textFaint, marginTop: 2 }}>{fmtDuration(cleanD)}</div>
                   )}
@@ -1151,7 +1174,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                   {[
                     { l: "Streak", v: `${getStreak(detailHabit.id)}d` },
                     { l: "Total", v: getTotal(detailHabit.id) },
-                    { l: "Stage", v: STAGE_LABELS[getStageForId(detailHabit.id)] },
+                    { l: "Best", v: `${getStreak(detailHabit.id)}d` },
                   ].map((s, i) => (
                     <div key={i}>
                       <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "'Fraunces',serif", color: th.text }}>{s.v}</div>
@@ -1173,7 +1196,7 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
                   return (
                     <div style={{ maxWidth: 240, margin: "14px auto 0" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: th.textMuted, marginBottom: 3 }}>
-                        <span>{STAGE_LABELS[st]}</span><span>{STAGE_LABELS[st + 1]} in {remaining}d</span>
+                        <span>{STAGE_LABELS[st]}</span><span>{STAGE_LABELS[st + 1]} in {remaining} {remaining === 1 ? "day" : "days"}</span>
                       </div>
                       <div style={{ height: 6, borderRadius: 3, background: th.progressBg, overflow: "hidden" }}>
                         <div style={{
@@ -1326,17 +1349,18 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
               </div>
             </div>
 
-            {/* Remove */}
+            {/* Delete this habit — muted red text */}
             <button
               onClick={() => setConfirmDeleteId(detailHabit.id)}
               style={{
-                width: "100%", padding: 12, borderRadius: 12,
-                border: `1px solid ${th.dangerBorder}`, background: th.dangerBg,
-                color: "#ef4444", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                width: "100%", padding: 16, borderRadius: 12,
+                border: "none", background: "transparent",
+                color: "rgba(255,100,100,0.6)", fontSize: 12, fontWeight: 500, cursor: "pointer",
                 fontFamily: "inherit", transition: "all 0.12s",
+                textAlign: "center",
               }}
             >
-              Remove habit
+              Delete this habit
             </button>
           </div>
           );
@@ -1344,13 +1368,15 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
 
         {/* ═══ GALLERY ═══ */}
         {page === "gallery" && (
-          <Gallery habits={habits} getStage={getStageForId} getTotal={getTotal} isHappy={isHappy} th={th} />
+          <Gallery habits={habits} getStage={getStageForId} getTotal={getTotal} isHappy={isHappy} th={th}
+            onCreatureTap={(hId) => { setDetailId(hId); setPage("detail"); }}
+          />
         )}
 
         {/* ═══ CONSTELLATION ═══ */}
         {page === "constellation" && (
           <div style={{ animation: "fadeUp 0.28s ease" }}>
-            <Constellation habits={habits} isDone={isComplete} getStreak={getStreak} getTotal={getTotal} th={th} />
+            <Constellation habits={habits} isDone={isComplete} getStreak={getStreak} getTotal={getTotal} getCleanDays={getCleanDays} th={th} />
           </div>
         )}
 
@@ -1365,7 +1391,9 @@ export function BloomApp({ initialHabits, initialCoins, initialEarned, initialSt
 
         {/* ═══ SHOP ═══ */}
         {page === "shop" && (
-          <Shop coins={coins} ownedItems={ownedItems} onBuy={buyItem} th={th} />
+          <Shop coins={coins} ownedItems={ownedItems} onBuy={buyItem} th={th}
+            onOwnedTap={() => { setPage("main"); setTimeout(() => terRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 100); }}
+          />
         )}
       </div>
 

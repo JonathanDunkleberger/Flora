@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Check, Sparkles, Orbit, Waves, Rocket } from "lucide-react";
+import { Sparkles, TrendingUp, Shield, Flame, Heart, Calendar } from "lucide-react";
 import { seed, daysAgo } from "@/lib/utils";
 import { getSynergyName } from "@/lib/constants";
 import type { ThemeColors } from "@/lib/constants";
@@ -12,6 +12,7 @@ interface ConstellationProps {
   isDone: (id: string, date: string) => boolean;
   getStreak: (id: string) => number;
   getTotal: (id: string) => number;
+  getCleanDays?: (id: string) => number;
   th: ThemeColors;
 }
 
@@ -24,51 +25,146 @@ interface Synergy {
   label: string;
 }
 
-export function Constellation({ habits, isDone, getStreak, getTotal, th }: ConstellationProps) {
+export function Constellation({ habits, isDone, getStreak, getTotal, getCleanDays, th }: ConstellationProps) {
   const sr = seed;
 
+  const buildHabits = habits.filter((h) => h.category !== "quit");
+  const quitHabits = habits.filter((h) => h.category === "quit");
+
+  // ── Overview stats ──
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const buildDoneToday = buildHabits.filter((h) => isDone(h.id, todayStr)).length;
+  const totalHabitsOnTrack = habits.filter((h) => {
+    if (h.category === "quit") return getCleanDays ? getCleanDays(h.id) > 0 : getStreak(h.id) > 0;
+    return isDone(h.id, todayStr);
+  }).length;
+  const weekPct = habits.length ? Math.round((totalHabitsOnTrack / habits.length) * 100) : 0;
+  const avgClean = quitHabits.length
+    ? Math.round(quitHabits.reduce((sum, h) => sum + (getCleanDays ? getCleanDays(h.id) : getStreak(h.id)), 0) / quitHabits.length)
+    : 0;
+
+  // ── Synergies ──
   const synergies = useMemo<Synergy[]>(() => {
     const result: Synergy[] = [];
-    if (habits.length < 2) return result;
+    if (buildHabits.length < 2) return result;
     const last30 = Array.from({ length: 30 }, (_, i) => daysAgo(i));
-    for (let i = 0; i < habits.length; i++) {
-      for (let j = i + 1; j < habits.length; j++) {
-        const a = habits[i], b = habits[j];
+    for (let i = 0; i < buildHabits.length; i++) {
+      for (let j = i + 1; j < buildHabits.length; j++) {
+        const a = buildHabits[i], b = buildHabits[j];
         let coCount = 0;
         last30.forEach((d) => { if (isDone(a.id, d) && isDone(b.id, d)) coCount++; });
         if (coCount >= 3) {
           const name = getSynergyName(a.name, b.name);
           result.push({
             a: i, b: j, strength: Math.min(coCount / 20, 1), coCount, name,
-            label: name || `${a.name.slice(0, 6)}×${b.name.slice(0, 6)}`,
+            label: name || `${a.name.slice(0, 8)} × ${b.name.slice(0, 8)}`,
           });
         }
       }
     }
     return result;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [habits, isDone]);
 
-  const cx = 200, cy = 175, radius = 110;
-  const positions = habits.map((_, i) => {
-    const angle = (i / Math.max(habits.length, 1)) * Math.PI * 2 - Math.PI / 2;
+  // ── Streak insights ──
+  const longestQuitStreak = quitHabits.reduce((best, h) => {
+    const s = getCleanDays ? getCleanDays(h.id) : getStreak(h.id);
+    return s > best.days ? { days: s, name: h.name } : best;
+  }, { days: 0, name: "" });
+
+  const bestBuildStreak = buildHabits.length > 0 ? Math.max(...buildHabits.map((h) => getStreak(h.id))) : 0;
+  const bestBuildName = buildHabits.find((h) => getStreak(h.id) === bestBuildStreak)?.name || "";
+
+  // Day-of-week analysis
+  const dayOfWeekMisses = useMemo(() => {
+    const missByDay = [0, 0, 0, 0, 0, 0, 0];
+    const last30 = Array.from({ length: 30 }, (_, i) => daysAgo(i));
+    last30.forEach((d) => {
+      const dayIdx = new Date(d + "T12:00:00").getDay();
+      buildHabits.forEach((h) => {
+        if (!isDone(h.id, d)) missByDay[dayIdx]++;
+      });
+    });
+    return missByDay;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habits, isDone]);
+
+  const worstDay = dayOfWeekMisses.indexOf(Math.max(...dayOfWeekMisses));
+  const dayNames = ["Sundays", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays"];
+
+  // ── Calm advice ──
+  const getAdvice = (): string => {
+    const justRelapsed = quitHabits.some((h) => (getCleanDays ? getCleanDays(h.id) : getStreak(h.id)) === 0);
+    if (justRelapsed) {
+      return longestQuitStreak.days > 0
+        ? `A slip is not a fall. You've proven you can go ${longestQuitStreak.days} ${longestQuitStreak.days === 1 ? "day" : "days"}. Do it again.`
+        : "Starting over takes courage. You're here. That's what matters.";
+    }
+    const shortQuit = quitHabits.find((h) => {
+      const d = getCleanDays ? getCleanDays(h.id) : getStreak(h.id);
+      return d > 0 && d < 3;
+    });
+    if (shortQuit) return "The first 72 hours are the hardest. Your brain is recalibrating. This is temporary.";
+    const weekStreak = quitHabits.find((h) => {
+      const d = getCleanDays ? getCleanDays(h.id) : getStreak(h.id);
+      return d >= 7;
+    });
+    if (weekStreak) return "One week in. Your neural pathways are physically changing. Don\u2019t stop now.";
+    if (totalHabitsOnTrack === habits.length && habits.length > 0) return "You showed up today. That\u2019s what matters.";
+    return "Small steps compound. Trust the process.";
+  };
+  const advice = getAdvice();
+
+  // Constellation positions
+  const cx = 160, cy = 140, radius = 90;
+  const positions = buildHabits.map((_, i) => {
+    const angle = (i / Math.max(buildHabits.length, 1)) * Math.PI * 2 - Math.PI / 2;
     return { x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius };
   });
 
   return (
     <div style={{ animation: "fadeUp .28s ease" }}>
+      {/* Title */}
       <div style={{ textAlign: "center", marginBottom: 12 }}>
-        <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 19, fontWeight: 500, color: th.text }}>Habit Constellation</h2>
-        <p style={{ fontSize: 11, color: th.textSub, marginTop: 2 }}>Habits done on the same days form glowing connections</p>
+        <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 19, fontWeight: 500, color: th.text }}>Insights</h2>
+        <p style={{ fontSize: 11, color: th.textSub, marginTop: 2 }}>Your habits at a glance</p>
       </div>
 
-      {habits.length < 2 ? (
-        <div className="cd" style={{ padding: "40px 20px", textAlign: "center", background: th.card }}>
-          <Sparkles size={24} style={{ color: th.textFaint, marginBottom: 8 }} />
-          <p style={{ fontSize: 13, color: th.textMuted }}>Add 2+ habits to see your constellation form</p>
+      {/* ── 1. Overview stats ── */}
+      <div className="cd" style={{ padding: 16, marginBottom: 10, background: th.card, borderColor: th.cardBorder, boxShadow: th.cardShadow }}>
+        <div style={{ display: "flex", justifyContent: "space-around", textAlign: "center" }}>
+          <div>
+            <div style={{ fontSize: 28, fontWeight: 700, fontFamily: "'Fraunces',serif", color: weekPct >= 80 ? "#4caf50" : th.text }}>{weekPct}%</div>
+            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".5px", textTransform: "uppercase", color: th.label, marginTop: 2 }}>On Track</div>
+            <div style={{ fontSize: 10, color: th.textSub, marginTop: 1 }}>{totalHabitsOnTrack} of {habits.length}</div>
+          </div>
+          {quitHabits.length > 0 && (
+            <div>
+              <div style={{ fontSize: 28, fontWeight: 700, fontFamily: "'Fraunces',serif", color: th.text }}>{avgClean}<span style={{ fontSize: 14, fontWeight: 500 }}>d</span></div>
+              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".5px", textTransform: "uppercase", color: th.label, marginTop: 2 }}>Avg Clean</div>
+              <div style={{ fontSize: 10, color: th.textSub, marginTop: 1 }}>{quitHabits.length} quit {quitHabits.length === 1 ? "habit" : "habits"}</div>
+            </div>
+          )}
+          {buildHabits.length > 0 && (
+            <div>
+              <div style={{ fontSize: 28, fontWeight: 700, fontFamily: "'Fraunces',serif", color: buildDoneToday === buildHabits.length ? "#4caf50" : th.text }}>
+                {buildDoneToday}<span style={{ fontSize: 14, fontWeight: 500 }}>/{buildHabits.length}</span>
+              </div>
+              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".5px", textTransform: "uppercase", color: th.label, marginTop: 2 }}>Done Today</div>
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="cd" style={{ overflow: "hidden", background: th.card }}>
-          <svg viewBox="0 0 400 350" style={{ width: "100%", display: "block" }}>
+      </div>
+
+      {/* ── 2. Habit synergies (constellation visual) ── */}
+      {buildHabits.length >= 2 && (
+        <div className="cd" style={{ overflow: "hidden", marginBottom: 10, background: th.card, borderColor: th.cardBorder, boxShadow: th.cardShadow }}>
+          <div style={{ padding: "12px 14px 0" }}>
+            <div className="lb" style={{ color: th.label, display: "flex", alignItems: "center", gap: 4 }}>
+              <Sparkles size={10} /> Habit Synergies
+            </div>
+          </div>
+          <svg viewBox="0 0 320 280" style={{ width: "100%", display: "block" }}>
             <defs>
               <filter id="cgl"><feGaussianBlur stdDeviation="2.5" /></filter>
               <radialGradient id="cbg" cx="50%" cy="50%" r="50%">
@@ -76,17 +172,14 @@ export function Constellation({ habits, isDone, getStreak, getTotal, th }: Const
                 <stop offset="100%" stopColor="transparent" />
               </radialGradient>
             </defs>
-            <rect width="400" height="350" fill="url(#cbg)" />
-            {/* Stars */}
-            {Array.from({ length: 40 }).map((_, i) => {
+            <rect width="320" height="280" fill="url(#cbg)" />
+            {Array.from({ length: 25 }).map((_, i) => {
               const r = sr(i * 31 + 7);
-              return <circle key={i} cx={r() * 400} cy={r() * 350} r={0.3 + r() * 0.7} fill={th.text} opacity={0.06 + r() * 0.08} />;
+              return <circle key={i} cx={r() * 320} cy={r() * 280} r={0.3 + r() * 0.7} fill={th.text} opacity={0.06 + r() * 0.08} />;
             })}
-            {/* Synergy lines */}
             {synergies.map((syn, i) => {
               const from = positions[syn.a], to = positions[syn.b];
               if (!from || !to) return null;
-              const mx = (from.x + to.x) / 2, my = (from.y + to.y) / 2;
               return (
                 <g key={`syn${i}`}>
                   <line x1={from.x} y1={from.y} x2={to.x} y2={to.y}
@@ -95,76 +188,102 @@ export function Constellation({ habits, isDone, getStreak, getTotal, th }: Const
                     stroke="#8B5CF6" strokeWidth={0.8 + syn.strength * 1.2} opacity={syn.strength * 0.5} strokeLinecap="round">
                     <animate attributeName="opacity" values={`${syn.strength * 0.3};${syn.strength * 0.6};${syn.strength * 0.3}`} dur={`${3 + i}s`} repeatCount="indefinite" />
                   </line>
-                  {syn.strength >= 0.3 && (
-                    <text x={mx} y={my - 7} textAnchor="middle" fontSize="7" fill="#8B5CF6" opacity={syn.strength * 0.7} fontWeight="600">{syn.label}</text>
-                  )}
-                  <circle r="1.5" fill="#8B5CF6" opacity={syn.strength * 0.6}>
-                    <animateMotion dur={`${5 + i * 2}s`} repeatCount="indefinite" path={`M${from.x},${from.y} L${to.x},${to.y}`} />
-                  </circle>
                 </g>
               );
             })}
-            {/* Habit nodes */}
-            {habits.map((h, i) => {
+            {buildHabits.map((h, i) => {
               const pos = positions[i];
               if (!pos) return null;
               const streak = getStreak(h.id);
-              const nodeR = 7 + Math.min(streak, 30) * 0.3;
+              const nodeR = 6 + Math.min(streak, 30) * 0.2;
               return (
                 <g key={i}>
-                  <circle cx={pos.x} cy={pos.y} r={nodeR + 6} fill={h.color} opacity="0.06" />
-                  <circle cx={pos.x} cy={pos.y} r={nodeR + 2} fill="none" stroke={h.color} strokeWidth="0.5" opacity="0.25" />
+                  <circle cx={pos.x} cy={pos.y} r={nodeR + 4} fill={h.color} opacity="0.06" />
                   <circle cx={pos.x} cy={pos.y} r={nodeR} fill={h.color} opacity="0.85" />
                   <circle cx={pos.x - nodeR * 0.3} cy={pos.y - nodeR * 0.3} r={nodeR * 0.2} fill="white" opacity="0.25" />
-                  <text x={pos.x} y={pos.y + nodeR + 13} textAnchor="middle" fontSize="9" fill={th.text} opacity="0.6" fontWeight="600">{h.name}</text>
-                  <text x={pos.x} y={pos.y + nodeR + 23} textAnchor="middle" fontSize="7" fill={th.text} opacity="0.25">{streak}d</text>
+                  <text x={pos.x} y={pos.y + nodeR + 12} textAnchor="middle" fontSize="8" fill={th.text} opacity="0.6" fontWeight="600">{h.name}</text>
+                  <text x={pos.x} y={pos.y + nodeR + 21} textAnchor="middle" fontSize="7" fill={th.text} opacity="0.25">{streak}d</text>
                 </g>
               );
             })}
           </svg>
+          {synergies.length > 0 && (
+            <div style={{ padding: "0 14px 12px", display: "flex", flexDirection: "column", gap: 4 }}>
+              {[...synergies].sort((a, b) => b.strength - a.strength).slice(0, 3).map((syn, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 8, background: th.hoverBg }}>
+                  <div style={{ width: 5, height: 5, borderRadius: "50%", background: "#8B5CF6", opacity: syn.strength }} />
+                  <div style={{ flex: 1, fontSize: 11, color: th.text, fontWeight: 500 }}>{syn.label}</div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: "#8B5CF6", opacity: 0.7 }}>{syn.coCount}d together</div>
+                </div>
+              ))}
+            </div>
+          )}
+          {synergies.length === 0 && (
+            <div style={{ padding: "8px 14px 14px", fontSize: 11, color: th.textMuted, textAlign: "center" }}>
+              Complete habits on the same days to form synergies
+            </div>
+          )}
         </div>
       )}
 
-      {/* Synergy list */}
-      {synergies.length > 0 && (
-        <div className="cd" style={{ padding: 14, marginTop: 10, background: th.card }}>
-          <div className="lb" style={{ marginBottom: 8 }}>Active Synergies</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {[...synergies].sort((a, b) => b.strength - a.strength).map((syn, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, background: th.hoverBg }}>
-                <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#8B5CF6", opacity: syn.strength }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: th.text }}>{syn.label}</div>
-                  <div style={{ fontSize: 10, color: th.textSub }}>{habits[syn.a]?.name} + {habits[syn.b]?.name}</div>
+      {/* ── 3. Streak insights ── */}
+      <div className="cd" style={{ padding: 14, marginBottom: 10, background: th.card, borderColor: th.cardBorder, boxShadow: th.cardShadow }}>
+        <div className="lb" style={{ marginBottom: 10, color: th.label, display: "flex", alignItems: "center", gap: 4 }}>
+          <TrendingUp size={10} /> Streak Insights
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {longestQuitStreak.days > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Shield size={14} color="#4ade80" />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: th.text }}>
+                  Longest quit streak: {longestQuitStreak.days} {longestQuitStreak.days === 1 ? "day" : "days"}
                 </div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "#8B5CF6", opacity: 0.7 }}>{syn.coCount}d together</div>
+                <div style={{ fontSize: 10, color: th.textSub }}>{longestQuitStreak.name}</div>
               </div>
-            ))}
+            </div>
+          )}
+          {bestBuildStreak > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Flame size={14} color="#f59e0b" />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: th.text }}>
+                  Best build streak: {bestBuildStreak} {bestBuildStreak === 1 ? "day" : "days"}
+                </div>
+                <div style={{ fontSize: 10, color: th.textSub }}>{bestBuildName}</div>
+              </div>
+            </div>
+          )}
+          {buildHabits.length > 0 && dayOfWeekMisses[worstDay] > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Calendar size={14} color={th.textMuted} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: th.text }}>
+                  You tend to miss habits on {dayNames[worstDay]}
+                </div>
+                <div style={{ fontSize: 10, color: th.textSub }}>Stay vigilant on that day</div>
+              </div>
+            </div>
+          )}
+          {habits.length === 0 && (
+            <div style={{ fontSize: 12, color: th.textMuted, textAlign: "center", padding: 10 }}>
+              Add habits to see insights
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── 4. Calm advice ── */}
+      {habits.length > 0 && (
+        <div className="cd" style={{ padding: 16, marginBottom: 10, background: th.card, borderColor: th.cardBorder, boxShadow: th.cardShadow }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+            <Heart size={16} color={th.textSub} style={{ flexShrink: 0, marginTop: 1 }} />
+            <p style={{ fontSize: 13, color: th.text, fontWeight: 500, lineHeight: 1.5, fontStyle: "italic", margin: 0 }}>
+              &ldquo;{advice}&rdquo;
+            </p>
           </div>
         </div>
       )}
-
-      {/* Unlock progress */}
-      <div className="cd" style={{ padding: 14, marginTop: 10, background: th.card }}>
-        <div className="lb" style={{ marginBottom: 8 }}>Constellation Unlocks</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {[
-            { n: 1, reward: "Faint orbital ring", Icon: Orbit },
-            { n: 3, reward: "Planet rainbow shimmer", Icon: Sparkles },
-            { n: 5, reward: "Northern lights", Icon: Waves },
-            { n: 8, reward: "Comet visitors", Icon: Rocket },
-          ].map((u, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, opacity: synergies.length >= u.n ? 1 : 0.35 }}>
-              <u.Icon size={16} color={synergies.length >= u.n ? "#8B5CF6" : th.textMuted} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: synergies.length >= u.n ? "#8B5CF6" : th.textMuted }}>{u.n} synergies</div>
-                <div style={{ fontSize: 10, color: th.textSub }}>{u.reward}</div>
-              </div>
-              {synergies.length >= u.n && <Check size={14} color="#8B5CF6" />}
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

@@ -17,11 +17,13 @@ interface TerrariumSceneProps {
   season?: SeasonKey;
   darkMode?: boolean;
   ownedItems?: string[];
+  onCreatureTap?: (habitId: string) => void;
 }
 
 export function TerrariumScene({
   habits, getStage, isHappy, pct, bouncingId,
   season = "summer", darkMode = false, ownedItems = [],
+  onCreatureTap,
 }: TerrariumSceneProps) {
   const allDone = pct >= 1 && habits.length > 0;
   const half = pct >= 0.5;
@@ -29,28 +31,53 @@ export function TerrariumScene({
   const sr = seed;
 
   // Planet center & radius — scales with habit count and progress
-  const cx = 200, cy = 190;
-  const baseRadius = 85;
-  const habitBonus = Math.min(habits.length * 3, 25);
-  const progressBonus = pct * 10;
+  const cx = 200, cy = 200;
+  const baseRadius = 110;
+  const habitBonus = Math.min(habits.length * 3, 20);
+  const progressBonus = pct * 8;
   const pr = baseRadius + habitBonus + progressBonus;
 
-  // ── CREATURE PLACEMENT: even spread from -80° to +80° (measured from planet top) ──
-  // This distributes creatures across the visible upper hemisphere arc
+  // ── CREATURE PLACEMENT: spread across full upper 270° of planet ──
+  // Uses predefined arcs for small counts, even distribution for 6+
   const N = habits.length;
-  const creatureAngles = habits.map((_, i) => {
-    if (N === 1) return -90; // single creature at top
-    // Spread evenly across -80° to +80° from top center (which is -170° to -10° in math coords)
-    const angleDeg = -80 + (160 / (N + 1)) * (i + 1); // degrees from top
+  const creatureAngles = habits.map((h, i) => {
+    // Base angles (degrees from top, 0 = top center)
+    let baseAngle: number;
+    if (N === 1) baseAngle = 0;
+    else if (N === 2) baseAngle = [-45, 45][i];
+    else if (N === 3) baseAngle = [-60, 0, 60][i];
+    else if (N === 4) baseAngle = [-90, -30, 30, 90][i];
+    else if (N === 5) baseAngle = [-100, -50, 0, 50, 100][i];
+    else baseAngle = -120 + (240 / (N - 1)) * i; // 6+: evenly from -120 to +120
+
+    // Seeded jitter: ±5° angle, ±3px radial
+    const hashVal = h.id.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    const jitterAngle = ((hashVal * 7 + 13) % 100) / 100 * 10 - 5; // ±5°
+    const angleDeg = baseAngle + jitterAngle;
     return -90 + angleDeg; // convert to math angle (top = -90°)
   });
+  // Per-creature radial jitter
+  const creatureRadialJitter = habits.map((h) => {
+    const hashVal = h.id.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    return ((hashVal * 11 + 29) % 100) / 100 * 6 - 3; // ±3px
+  });
 
-  // ── DECORATION PLACEMENT: lower hemisphere 20° to 120° from top ──
-  const decorAngles = ownedItems.map((_, i) => {
-    const total = ownedItems.length;
-    if (total === 0) return 0;
-    const angleDeg = 20 + (100 / (total + 1)) * (i + 1); // degrees from top
-    return -90 + angleDeg; // convert to math angle
+  // ── DECORATION PLACEMENT: seeded random across planet surface ──
+  const decoPositions = ownedItems.map((itemId) => {
+    const hashVal = itemId.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    // Trees go to edge, small items can be more interior
+    const isTall = ["sakura", "pine", "willow", "oak"].includes(itemId);
+    const angleDeg = (hashVal * 37 + 17) % 360; // 0-360 seeded angle
+    const radiusPercent = isTall
+      ? 0.95 + ((hashVal * 13) % 6) / 100 // 0.95-1.00
+      : 0.80 + ((hashVal * 11 + 7) % 20) / 100; // 0.80-0.99
+    const angleRad = (-90 + angleDeg) * Math.PI / 180;
+    return {
+      angle: -90 + angleDeg,
+      x: cx + Math.cos(angleRad) * (pr * radiusPercent),
+      y: cy + Math.sin(angleRad) * (pr * radiusPercent),
+      rotation: angleDeg, // perpendicular to surface
+    };
   });
 
   // Season-based planet colors
@@ -74,13 +101,14 @@ export function TerrariumScene({
   return (
     <div style={{
       position: "relative", width: "100%",
-      aspectRatio: `4 / ${3 + Math.min(habits.length * 0.05, 0.4)}`,
+      aspectRatio: "1 / 1",
+      maxHeight: 380,
       borderRadius: 22, overflow: "hidden",
       background: `radial-gradient(ellipse at 50% 60%, ${sky[2]} 0%, ${sky[1]} 40%, ${sky[0]} 100%)`,
       transition: "background 1.5s ease",
       boxShadow: "0 2px 24px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.05)",
     }}>
-      <svg width="100%" height="100%" viewBox="0 0 400 350" preserveAspectRatio="xMidYMid meet" style={{ position: "absolute", inset: 0 }}>
+      <svg width="100%" height="100%" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet" style={{ position: "absolute", inset: 0 }}>
         <defs>
           <radialGradient id="lp-planet" cx="40%" cy="35%" r="60%">
             <stop offset="0%" stopColor={pc.base} />
@@ -105,7 +133,7 @@ export function TerrariumScene({
         {/* ── STARFIELD ── */}
         {Array.from({ length: 40 + Math.floor(pct * 30) }).map((_, i) => {
           const r = sr(i * 37 + 7);
-          const sx = r() * 400, sy = r() * 350;
+          const sx = r() * 400, sy = r() * 400;
           const sz = 0.4 + r() * (pct > 0.5 ? 1.4 : 0.8);
           return (
             <circle key={`s${i}`} cx={sx} cy={sy} r={sz} fill="white" opacity={0.15 + r() * 0.45}>
@@ -203,13 +231,17 @@ export function TerrariumScene({
 
         {/* ── OWNED SHOP ITEMS on planet surface — LOWER hemisphere ── */}
         {ownedItems.map((itemId, i) => {
-          const angleDeg = decorAngles[i] || 0;
-          const angleRad = angleDeg * Math.PI / 180;
-          const ix = cx + Math.cos(angleRad) * (pr + 1);
-          const iy = cy + Math.sin(angleRad) * (pr + 1);
-          const rotDeg = angleDeg + 90;
+          const deco = decoPositions[i];
+          if (!deco) return null;
+          const ix = deco.x;
+          const iy = deco.y;
+          const rotDeg = deco.rotation + 90;
           return (
-            <PlanetItem key={itemId} id={itemId} x={ix} y={iy} rotation={rotDeg} scale={0.65} />
+            <g key={itemId}>
+              {/* Subtle shadow to ground the decoration */}
+              <ellipse cx={ix} cy={iy + 2} rx={8} ry={3} fill="rgba(0,0,0,0.08)" />
+              <PlanetItem key={itemId} id={itemId} x={ix} y={iy} rotation={rotDeg} scale={0.65} />
+            </g>
           );
         })}
 
@@ -230,8 +262,9 @@ export function TerrariumScene({
 
           const angleDeg = creatureAngles[i] ?? -90;
           const angleRad = angleDeg * Math.PI / 180;
-          const px = cx + Math.cos(angleRad) * (pr + 2);
-          const py = cy + Math.sin(angleRad) * (pr + 2);
+          const rJitter = creatureRadialJitter[i] || 0;
+          const px = cx + Math.cos(angleRad) * (pr + 2 + rJitter);
+          const py = cy + Math.sin(angleRad) * (pr + 2 + rJitter);
           const rotDeg = angleDeg + 90;
 
           // Sprite display size based on stage
@@ -252,7 +285,10 @@ export function TerrariumScene({
               : `bob ${2.2 + r() * 1.5}s ease-in-out infinite`;
 
           return (
-            <g key={h.id} transform={`translate(${px}, ${py}) rotate(${rotDeg})`}>
+            <g key={h.id} transform={`translate(${px}, ${py}) rotate(${rotDeg})`}
+              style={{ cursor: onCreatureTap ? "pointer" : "default" }}
+              onClick={() => onCreatureTap?.(h.id)}
+            >
               {/* Soft glow circle underneath creature */}
               <circle cx="0" cy={0} r={scaledSz * 0.4} fill={h.color} opacity={hp ? 0.18 : 0.08} />
               <g style={{ animation: anim, animationDelay: `${r() * 2}s` }}>

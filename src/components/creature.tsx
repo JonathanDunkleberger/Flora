@@ -58,7 +58,7 @@ export function Creature({ stage, color, happy = false, size, bounce = false }: 
           display: "block",
           position: "relative",
           filter: happy ? "none" : "saturate(0.55) brightness(0.85)",
-          transition: "filter 0.3s ease",
+          transition: "filter 0.3s ease, opacity 0.2s ease",
           animation: bounce
             ? "creatureBounce 0.5s cubic-bezier(0.34,1.56,0.64,1)"
             : "creatureFloat 2.5s ease-in-out infinite",

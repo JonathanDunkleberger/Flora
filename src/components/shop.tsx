@@ -11,10 +11,11 @@ interface ShopProps {
   coins: number;
   ownedItems: string[];
   onBuy: (itemId: string) => void;
+  onOwnedTap?: (itemId: string) => void;
   th: ThemeColors;
 }
 
-export function Shop({ coins, ownedItems, onBuy, th }: ShopProps) {
+export function Shop({ coins, ownedItems, onBuy, onOwnedTap, th }: ShopProps) {
   const [activeCategory, setActiveCategory] = useState<ShopCategory>("landscape");
 
   const items = SHOP_ITEMS.filter((item) => item.category === activeCategory);
@@ -124,11 +125,14 @@ export function Shop({ coins, ownedItems, onBuy, th }: ShopProps) {
               <div style={{ fontSize: 10, color: th.textSub, marginTop: 2, lineHeight: 1.3 }}>{item.description}</div>
 
               {owned ? (
-                <div style={{
+                <div
+                  onClick={() => onOwnedTap?.(item.id)}
+                  style={{
                   marginTop: 8, padding: "6px 0", borderRadius: 8,
                   background: "rgba(76,175,80,0.08)", color: "#4caf50",
                   fontSize: 11, fontWeight: 600, display: "flex",
                   alignItems: "center", justifyContent: "center", gap: 3,
+                  cursor: onOwnedTap ? "pointer" : "default",
                 }}>
                   <Check size={11} /> Owned
                 </div>
