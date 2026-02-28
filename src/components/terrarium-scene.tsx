@@ -379,35 +379,21 @@ export function TerrariumScene({
               <circle cx="0" cy={0} r={scaledSz * (mood === "thriving" ? 0.55 : 0.4)}
                 fill={h.color} opacity={mood === "thriving" ? 0.25 : hp ? 0.18 : 0.08} />
               <g style={{ animation: anim, animationDelay: `${r() * 2}s`, transform: moodScale }}>
-                {/* ONE sprite image via foreignObject */}
-                <foreignObject
+                {/* Creature sprite via native SVG image — reliable on mobile Safari */}
+                <image
+                  href={spritePath}
                   x={-scaledSz / 2} y={-scaledSz}
                   width={scaledSz} height={scaledSz}
                   transform={`rotate(${-rotDeg})`}
-                  style={{ overflow: "visible" }}
-                >
-                  <div style={{ width: scaledSz, height: scaledSz }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={spritePath}
-                      alt={h.name}
-                      width={scaledSz}
-                      height={scaledSz}
-                      style={{
-                        imageRendering: "pixelated",
-                        display: "block",
-                        width: scaledSz,
-                        height: scaledSz,
-                        filter: moodFilter,
-                        transition: "filter 0.5s ease, transform 0.3s ease",
-                        animation: mood === "healthy" || mood === "thriving"
-                          ? `creatureBlink 4s ease-in-out infinite ${1 + r() * 3}s`
-                          : undefined,
-                      }}
-                      draggable={false}
-                    />
-                  </div>
-                </foreignObject>
+                  style={{
+                    imageRendering: "pixelated",
+                    filter: moodFilter,
+                    transition: "filter 0.5s ease, transform 0.3s ease",
+                    animation: mood === "healthy" || mood === "thriving"
+                      ? `creatureBlink 4s ease-in-out infinite ${1 + r() * 3}s`
+                      : undefined,
+                  }}
+                />
                 {/* Name label — always horizontal (counter-rotate), below sprite */}
                 <foreignObject
                   x={-40} y={4}

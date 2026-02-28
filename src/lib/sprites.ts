@@ -30,6 +30,16 @@ const COLOR_MAP: Record<string, CreatureColor> = {
   "#14b8a6": "green",    // teal → green
   "#f97316": "brown",    // orange → brown
   "#06b6d4": "blue",     // cyan → blue
+  // Quit habit preset colors
+  "#27ae60": "green",    // quit-green → green
+  "#607d8b": "blue",     // blue-grey → blue
+  "#8e44ad": "blue",     // purple → blue
+  "#e74c3c": "red",      // quit-red → red
+  "#95a5a6": "default",  // grey → default
+  "#f39c12": "brown",    // yellow-orange → brown
+  "#d35400": "brown",    // burnt-orange → brown
+  "#455a64": "blue",     // dark-grey → blue
+  "#e67e22": "brown",    // orange → brown
 };
 
 export function getCreatureColor(hexColor: string): CreatureColor {

@@ -53,9 +53,15 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
   const [coins, setCoins] = useState(initialCoins);
   const [earned, setEarned] = useState<EarnedMilestones>(initialEarned);
   const [streakFreezes, setStreakFreezes] = useState<Record<string, number>>(initialStreakFreezes);
-  const [pausedHabits, setPausedHabits] = useState<Record<string, boolean>>({});
-  const [earnedMilestoneCoins, setEarnedMilestoneCoins] = useState<Record<string, string[]>>({});
-  const [stageDrops, setStageDrops] = useState<Record<string, number>>({});
+  const [pausedHabits, setPausedHabits] = useState<Record<string, boolean>>(() => {
+    try { const r = typeof window !== "undefined" && localStorage.getItem("tend_paused_habits"); return r ? JSON.parse(r) : {}; } catch { return {}; }
+  });
+  const [earnedMilestoneCoins, setEarnedMilestoneCoins] = useState<Record<string, string[]>>(() => {
+    try { const r = typeof window !== "undefined" && localStorage.getItem("tend_milestone_coins"); return r ? JSON.parse(r) : {}; } catch { return {}; }
+  });
+  const [stageDrops, setStageDrops] = useState<Record<string, number>>(() => {
+    try { const r = typeof window !== "undefined" && localStorage.getItem("tend_stage_drops"); return r ? JSON.parse(r) : {}; } catch { return {}; }
+  });
   const [milestoneCelebration, setMilestoneCelebration] = useState<{ tier: CoinTier; habitName: string; coinReward: number } | null>(null);
   const [darkMode, setDarkMode] = useState(false);
   const [season, setSeason] = useState<SeasonKey>(getSeason());
@@ -94,13 +100,17 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
   const [daysAwayCnt, setDaysAwayCnt] = useState(0);
   const [bounceBackDay, setBounceBackDay] = useState(0);
-  const [quitDataMap, setQuitDataMap] = useState<Record<string, QuitData>>({});
+  const [quitDataMap, setQuitDataMap] = useState<Record<string, QuitData>>(() => {
+    try { const r = typeof window !== "undefined" && localStorage.getItem("tend_quit_data"); return r ? JSON.parse(r) : {}; } catch { return {}; }
+  });
   const [breathingHabit, setBreathingHabit] = useState<HabitWithStats | null>(null);
   const [showBreathe, setShowBreathe] = useState(false);
   const [relapseHabit, setRelapseHabit] = useState<HabitWithStats | null>(null);
   const [urgeSupportHabit, setUrgeSupportHabit] = useState<HabitWithStats | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [ownedItems, setOwnedItems] = useState<string[]>([]);
+  const [ownedItems, setOwnedItems] = useState<string[]>(() => {
+    try { const r = typeof window !== "undefined" && localStorage.getItem("tend_owned_items"); return r ? JSON.parse(r) : []; } catch { return []; }
+  });
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -175,36 +185,6 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
         }
       }
       localStorage.setItem("tend_last_visit", now);
-
-      // Load quit data
-      try {
-        const raw = localStorage.getItem("tend_quit_data");
-        if (raw) setQuitDataMap(JSON.parse(raw));
-      } catch { /* ignore */ }
-
-      // Load owned shop items
-      try {
-        const rawItems = localStorage.getItem("tend_owned_items");
-        if (rawItems) setOwnedItems(JSON.parse(rawItems));
-      } catch { /* ignore */ }
-
-      // Load paused habits
-      try {
-        const rawPaused = localStorage.getItem("tend_paused_habits");
-        if (rawPaused) setPausedHabits(JSON.parse(rawPaused));
-      } catch { /* ignore */ }
-
-      // Load earned milestone coins
-      try {
-        const rawMC = localStorage.getItem("tend_milestone_coins");
-        if (rawMC) setEarnedMilestoneCoins(JSON.parse(rawMC));
-      } catch { /* ignore */ }
-
-      // Load creature stage drops (relapse penalty)
-      try {
-        const rawSD = localStorage.getItem("tend_stage_drops");
-        if (rawSD) setStageDrops(JSON.parse(rawSD));
-      } catch { /* ignore */ }
 
       // Load Tend+ state
       const savedPro = localStorage.getItem("tend_pro");
@@ -1078,31 +1058,42 @@ export function TendApp({ initialHabits, initialCoins, initialEarned, initialStr
         <TendPlusScreen
           onClose={() => setShowPaywall(false)}
           onSubscribe={async (plan) => {
+            const activateLocally = () => {
+              setIsPro(true);
+              setProExpiry(new Date(Date.now() + (plan === "annual" ? 365 : 30) * 24 * 60 * 60 * 1000).toISOString());
+              setShowPaywall(false);
+              setCoinToast({ msg: "Welcome to Tend+!", icon: Sparkles });
+            };
             try {
               const res = await fetch("/api/checkout", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ plan }),
               });
-              const data = await res.json();
 
-              if (data.url) {
-                // Stripe checkout — redirect to payment page
-                window.location.href = data.url;
+              if (!res.ok) {
+                activateLocally();
                 return;
               }
 
-              // Dev mode or fallback — activate locally
-              setIsPro(true);
-              setProExpiry(new Date(Date.now() + (plan === "annual" ? 365 : 30) * 24 * 60 * 60 * 1000).toISOString());
-              setShowPaywall(false);
-              setCoinToast({ msg: "Welcome to Tend+!", icon: Sparkles });
+              let data: Record<string, unknown>;
+              try {
+                data = await res.json();
+              } catch {
+                activateLocally();
+                return;
+              }
+
+              if (data.url) {
+                window.location.href = data.url as string;
+                return;
+              }
+
+              // Dev mode or fallback
+              activateLocally();
             } catch {
               // Network error — activate locally so user is never stuck
-              setIsPro(true);
-              setProExpiry(new Date(Date.now() + (plan === "annual" ? 365 : 30) * 24 * 60 * 60 * 1000).toISOString());
-              setShowPaywall(false);
-              setCoinToast({ msg: "Welcome to Tend+!", icon: Sparkles });
+              activateLocally();
             }
           }}
         />
