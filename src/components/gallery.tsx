@@ -90,7 +90,10 @@ export function Gallery({ habits, getStage, getTotal, isHappy, th, onCreatureTap
               <div style={{ animation: "bob 2.5s ease-in-out infinite" }}>
                 <Creature stage={c.stage} color={c.color} happy={c.happy} size={60} />
               </div>
-              <div style={{ fontWeight: 600, fontSize: 13, color: th.text, marginTop: 4 }}>{c.name}</div>
+              <div style={{ fontWeight: 600, fontSize: 13, color: th.text, marginTop: 4 }}>{c.creature_name || c.name}</div>
+              {c.creature_name && (
+                <div style={{ fontSize: 10, color: th.textMuted, marginTop: 0 }}>{c.name}</div>
+              )}
               <div style={{ fontSize: 10, color: th.textSub, marginTop: 1 }}>{STAGE_LABELS[c.stage]}</div>
               <div style={{ marginTop: 6 }}>
                 <div style={{ display: "flex", gap: 3, justifyContent: "center" }}>

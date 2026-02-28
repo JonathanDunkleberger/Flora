@@ -429,7 +429,7 @@ export function TerrariumScene({
                     maxWidth: 80,
                     lineHeight: "14px",
                     fontFamily: "inherit",
-                  }}>{h.name}</div>
+                  }}>{h.creature_name || h.name}</div>
                 </foreignObject>
 
                 {/* ZZZ for sleeping creatures */}
@@ -475,6 +475,41 @@ export function TerrariumScene({
                       );
                     })}
                   </>
+                )}
+
+                {/* Hearts floating up for thriving creatures */}
+                {tc.showCreatureMoodFx && mood === "thriving" && !isBouncing && (
+                  <g transform={`rotate(${-rotDeg})`}>
+                    {[0, 1].map((hi) => (
+                      <text
+                        key={`h${hi}`}
+                        x={-4 + hi * 12}
+                        y={-scaledSz * 0.7}
+                        fontSize="7"
+                        fill="#ff6b9d"
+                        opacity="0"
+                      >
+                        ♥
+                        <animate attributeName="opacity" values="0;0.6;0" dur={`${2.5 + hi * 0.8}s`} repeatCount="indefinite" begin={`${hi * 1.2}s`} />
+                        <animate attributeName="y" values={`${-scaledSz * 0.7};${-scaledSz * 1.1}`} dur={`${2.5 + hi * 0.8}s`} repeatCount="indefinite" begin={`${hi * 1.2}s`} />
+                      </text>
+                    ))}
+                  </g>
+                )}
+
+                {/* Neglected: sweat drop */}
+                {tc.showCreatureMoodFx && mood === "neglected" && (
+                  <g transform={`rotate(${-rotDeg})`}>
+                    <text
+                      x={scaledSz * 0.2}
+                      y={-scaledSz * 0.6}
+                      fontSize="8"
+                      opacity="0"
+                    >
+                      💧
+                      <animate attributeName="opacity" values="0;0.5;0.5;0" dur="3s" repeatCount="indefinite" />
+                    </text>
+                  </g>
                 )}
               </g>
 

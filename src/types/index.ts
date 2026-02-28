@@ -22,6 +22,7 @@ export interface Habit {
   is_archived: boolean;
   is_paused: boolean;
   sort_order: number;
+  creature_name: string | null;
   created_at: string;
   updated_at: string;
 }

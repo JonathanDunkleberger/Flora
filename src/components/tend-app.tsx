@@ -7,6 +7,7 @@ import {
   Pencil, Shield, Sun, Moon, LayoutGrid, Crown,
   Users, RefreshCw, Wind, DollarSign, Heart,
   Sunrise, SunMedium, MoonStar, Menu, Store, Pause, Play,
+  Share2,
 } from "lucide-react";
 import { Creature } from "@/components/creature";
 import { TerrariumScene } from "@/components/terrarium-scene";
@@ -29,6 +30,8 @@ import { MultiHabitHeatmap } from "@/components/multi-habit-heatmap";
 import { MilestoneCoin, MilestoneCelebration, CoinBadge, CoinRow, MILESTONE_COINS } from "@/components/milestone-coin";
 import type { CoinTier } from "@/components/milestone-coin";
 import { MorningCheckin } from "@/components/morning-checkin";
+import { CreatureNamingModal } from "@/components/creature-naming-modal";
+import { ShareCard } from "@/components/share-card";
 import { getStage, getIcon, today, daysAgo, daysBetween, fmtDuration, fmtMoney, fmtQuitDate, haptic, getGreeting, formatLiveTimer } from "@/lib/utils";
 import {
   MILESTONES, STAGE_LABELS, STAGE_THRESHOLDS,
@@ -127,6 +130,23 @@ export function TendApp({
 
   // ── Egg callout tooltip for first quit habit ──
   const [showEggCallout, setShowEggCallout] = useState(false);
+
+  // ── Creature naming state ──
+  const [namingHabit, setNamingHabit] = useState<{ id: string; name: string; stage: number; color: string } | null>(null);
+  const prevStagesRef = useRef<Record<string, number>>({});
+
+  // ── Share card state ──
+  const [shareCardData, setShareCardData] = useState<{
+    creatureName: string | null;
+    habitName: string;
+    stage: number;
+    color: string;
+    streak: number;
+    totalDays: number;
+    isQuit: boolean;
+    cleanDays?: number;
+    moneySaved?: number;
+  } | null>(null);
 
   // ── Tend+ tier state (server-verified via profiles.tier) ──
   const [isPro, setIsPro] = useState(initialIsPro);
@@ -756,6 +776,55 @@ export function TendApp({
     }
   };
 
+  // ── Creature naming: save name to server ──
+  const nameCreature = useCallback((habitId: string, creatureName: string) => {
+    setHabits((prev) => prev.map((h) => h.id === habitId ? { ...h, creature_name: creatureName } : h));
+    apiSync(`/api/habits/${habitId}`, "PATCH", { creature_name: creatureName });
+    setNamingHabit(null);
+    haptic("success");
+    setCoinToast({ msg: `${creatureName} is ready to grow!`, icon: Sparkles });
+    setCoins((p) => p + 5);
+    syncCoins(5);
+  }, [syncCoins]);
+
+  // ── Creature stage-change detection: trigger naming on hatch ──
+  useEffect(() => {
+    if (!mounted) return;
+    const currentStages: Record<string, number> = {};
+    habits.forEach((h) => {
+      currentStages[h.id] = getStageForId(h.id);
+    });
+    // Compare with previous stages
+    for (const h of habits) {
+      const prev = prevStagesRef.current[h.id];
+      const curr = currentStages[h.id];
+      // Trigger naming when creature hatches (0 → 1) and has no name yet
+      if (prev !== undefined && prev === 0 && curr >= 1 && !h.creature_name) {
+        setNamingHabit({ id: h.id, name: h.name, stage: curr, color: h.color });
+        break; // only one naming at a time
+      }
+    }
+    prevStagesRef.current = currentStages;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, habits, getStageForId]);
+
+  // ── Share card launcher ──
+  const openShareCard = useCallback((h: HabitWithStats) => {
+    const dq = h.category === "quit";
+    const qd = quitDataMap[h.id];
+    setShareCardData({
+      creatureName: h.creature_name,
+      habitName: h.name,
+      stage: getStageForId(h.id),
+      color: h.color,
+      streak: getStreak(h.id),
+      totalDays: getTotal(h.id),
+      isQuit: dq,
+      cleanDays: dq ? getCleanDays(h.id) : undefined,
+      moneySaved: dq && qd ? (qd.dailyCost || 0) * getCleanDays(h.id) : undefined,
+    });
+  }, [quitDataMap, getStageForId, getStreak, getTotal, getCleanDays]);
+
   const removeHabit = async (id: string) => {
     const habit = habits.find((h) => h.id === id);
     const habitLogs = habit?.logs || [];
@@ -996,6 +1065,23 @@ export function TendApp({
           onClose={() => { setBreathingHabit(null); setShowBreathe(false); }}
           th={th}
         />
+      )}
+
+      {/* Creature naming ceremony */}
+      {namingHabit && (
+        <CreatureNamingModal
+          habitId={namingHabit.id}
+          habitName={namingHabit.name}
+          stage={namingHabit.stage}
+          color={namingHabit.color}
+          onName={(name) => nameCreature(namingHabit.id, name)}
+          onSkip={() => setNamingHabit(null)}
+        />
+      )}
+
+      {/* Share milestone card */}
+      {shareCardData && (
+        <ShareCard {...shareCardData} onClose={() => setShareCardData(null)} />
       )}
 
       {/* Urge support full screen */}
@@ -1562,14 +1648,25 @@ export function TendApp({
                               }}
                             />
                           ) : (
+                          <>
+                          {h.creature_name && (
+                            <span style={{
+                              fontSize: 15, fontWeight: 600,
+                              color: isPaused ? th.textMuted : th.text,
+                              transition: "all 0.2s",
+                            }}>
+                              {h.creature_name}
+                            </span>
+                          )}
                           <span style={{
-                            fontSize: 15, fontWeight: 500,
+                            fontSize: h.creature_name ? 11 : 15, fontWeight: h.creature_name ? 500 : 500,
                             textDecoration: done ? "line-through" : "none",
-                            color: isPaused ? th.textMuted : (done ? th.textMuted : th.text),
+                            color: isPaused ? th.textMuted : (h.creature_name ? th.textSub : (done ? th.textMuted : th.text)),
                             transition: "all 0.2s",
                           }}>
                             {h.name}
                           </span>
+                          </>
                           )}
                           {subtitle && (
                             <div style={{
@@ -1744,8 +1841,21 @@ export function TendApp({
                 </div>
               ) : (
                 <>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 6 }}>
-                    <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: 19, fontWeight: 600, color: th.text }}>{detailHabit.name}</h2>
+                  {/* Creature name — the hero identity */}
+                  {detailHabit.creature_name && (
+                    <div style={{
+                      fontFamily: "'Fraunces', serif",
+                      fontSize: 24,
+                      fontWeight: 700,
+                      color: "white",
+                      marginTop: 8,
+                      letterSpacing: "-0.3px",
+                    }}>
+                      {detailHabit.creature_name}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: detailHabit.creature_name ? 2 : 6 }}>
+                    <h2 style={{ fontFamily: "'Fraunces',serif", fontSize: detailHabit.creature_name ? 14 : 19, fontWeight: 600, color: detailHabit.creature_name ? th.textSub : th.text }}>{detailHabit.name}</h2>
                     <button
                       onClick={() => { setEditMode(true); setEditName(detailHabit.name); setEditColor(detailHabit.color); }}
                       style={{ background: th.progressBg, border: "none", borderRadius: 6, padding: 4, cursor: "pointer", display: "flex" }}
@@ -1760,6 +1870,20 @@ export function TendApp({
                     <p style={{ fontSize: 10, color: th.textFaint, marginTop: 1 }}>
                       {fmtQuitDate(dqd.quitDate)}
                     </p>
+                  )}
+                  {/* Name your creature prompt — if not yet named and stage >= 1 */}
+                  {!detailHabit.creature_name && getStageForId(detailHabit.id) >= 1 && (
+                    <button
+                      onClick={() => setNamingHabit({ id: detailHabit.id, name: detailHabit.name, stage: getStageForId(detailHabit.id), color: detailHabit.color })}
+                      style={{
+                        marginTop: 6, padding: "5px 14px", borderRadius: 100,
+                        background: `${detailHabit.color}15`, border: `1px solid ${detailHabit.color}25`,
+                        color: detailHabit.color, fontSize: 11, fontWeight: 600,
+                        cursor: "pointer", fontFamily: "inherit",
+                      }}
+                    >
+                      ✨ Name your creature
+                    </button>
                   )}
                 </>
               )}
@@ -1878,6 +2002,25 @@ export function TendApp({
                   );
                 })()}
             </div>
+
+            {/* Share progress card */}
+            {(getStageForId(detailHabit.id) >= 1 || (isQuit(detailHabit) && getCleanDays(detailHabit.id) >= 1)) && (
+              <button
+                onClick={() => openShareCard(detailHabit)}
+                style={{
+                  width: "100%", padding: "12px 16px", borderRadius: 12, marginBottom: 10,
+                  border: `1px solid ${detailHabit.color}20`,
+                  background: `${detailHabit.color}08`, cursor: "pointer", fontFamily: "inherit",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  fontSize: 14, fontWeight: 600,
+                  color: detailHabit.color,
+                  transition: "all 0.15s",
+                }}
+              >
+                <Share2 size={16} />
+                Share {detailHabit.creature_name ? `${detailHabit.creature_name}'s` : "your"} progress
+              </button>
+            )}
 
             {/* Pause / Resume toggle — all habit types */}
             <button
