@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Creature } from "@/components/creature";
-import { STAGE_LABELS } from "@/lib/constants";
+import { STAGE_NAMES } from "@/lib/sprites";
 
 /**
  * Cute creature name suggestions — short, endearing, easy to bond with.
@@ -21,6 +21,7 @@ interface CreatureNamingModalProps {
   habitName: string;
   stage: number;
   color: string;
+  creatureType?: number | null;
   onName: (name: string) => void;
   onSkip: () => void;
 }
@@ -34,6 +35,7 @@ export function CreatureNamingModal({
   habitName,
   stage,
   color,
+  creatureType,
   onName,
   onSkip,
 }: CreatureNamingModalProps) {
@@ -107,7 +109,7 @@ export function CreatureNamingModal({
         animation: entered ? "creatureBounce 0.6s cubic-bezier(0.34,1.56,0.64,1)" : "none",
         marginBottom: 16,
       }}>
-        <Creature stage={stage} color={color} happy size={160} />
+        <Creature stage={stage} color={color} happy size={160} creatureType={creatureType} habitId={habitId} />
       </div>
 
       {/* Title */}
@@ -120,7 +122,7 @@ export function CreatureNamingModal({
         marginBottom: 4,
         animation: entered ? "fadeUp 0.5s ease 0.2s both" : "none",
       }}>
-        Your {STAGE_LABELS[stage]} hatched! 🎉
+        Your {STAGE_NAMES[stage] || "dragon"} hatched! 🐉
       </div>
 
       <div style={{
@@ -148,7 +150,7 @@ export function CreatureNamingModal({
           marginBottom: 8,
           textAlign: "center",
         }}>
-          Give your creature a name
+          Give your dragon a name
         </div>
 
         <input
@@ -264,7 +266,7 @@ export function CreatureNamingModal({
             boxShadow: name.trim() ? `0 4px 20px ${color}44` : "none",
           }}
         >
-          Name my creature
+          Name my dragon
         </button>
       </div>
 

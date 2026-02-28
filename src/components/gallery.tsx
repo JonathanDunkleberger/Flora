@@ -88,7 +88,7 @@ export function Gallery({ habits, getStage, getTotal, isHappy, th, onCreatureTap
                 </div>
               )}
               <div style={{ animation: "bob 2.5s ease-in-out infinite" }}>
-                <Creature stage={c.stage} color={c.color} happy={c.happy} size={60} />
+                <Creature stage={c.stage} color={c.color} happy={c.happy} size={60} creatureType={c.creature_type} habitId={c.id} />
               </div>
               <div style={{ fontWeight: 600, fontSize: 13, color: th.text, marginTop: 4 }}>{c.creature_name || c.name}</div>
               {c.creature_name && (

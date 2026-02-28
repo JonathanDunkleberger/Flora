@@ -4,7 +4,7 @@ import { Sparkles } from "lucide-react";
 import { seed } from "@/lib/utils";
 import { SEASONS } from "@/lib/constants";
 import { PlanetItem } from "@/components/planet-items";
-import { getCreatureColor, getCreatureSprite, CREATURE_SIZES } from "@/lib/sprites";
+import { getDragonSprite, deriveDragonFromId, CREATURE_SIZES } from "@/lib/sprites";
 import { useReducedMotion } from "@/hooks/useReducedMotion";
 import { getAnimationTier, getTierConfig } from "@/lib/animation-tiers";
 import type { TierConfig } from "@/lib/animation-tiers";
@@ -356,8 +356,8 @@ export function TerrariumScene({
                          : N >= 6 ? Math.max(40, sz * 0.75)
                          : N >= 4 ? Math.max(44, sz * 0.85)
                          : sz;
-          const creatureColor = getCreatureColor(h.color);
-          const spritePath = getCreatureSprite(st, creatureColor);
+          const species = h.creature_type || deriveDragonFromId(h.id);
+          const spritePath = getDragonSprite(st, species);
 
           // Animation: mood-aware (disabled in minimal tier)
           const anim = !tc.animateCreatures
@@ -402,7 +402,6 @@ export function TerrariumScene({
                   width={scaledSz} height={scaledSz}
                   transform={`rotate(${-rotDeg})`}
                   style={{
-                    imageRendering: "pixelated",
                     filter: moodFilter,
                     transition: "filter 0.5s ease, transform 0.3s ease",
                     animation: tc.showCreatureMoodFx && (mood === "healthy" || mood === "thriving")

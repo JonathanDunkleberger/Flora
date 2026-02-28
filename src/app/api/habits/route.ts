@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { FREE_HABIT_LIMIT } from "@/lib/constants";
+import { rollDragonSpecies } from "@/lib/sprites";
 
 export async function GET() {
   const { userId } = await auth();
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
       color: body.color || "#6366f1",
       icon_name: body.icon_name || "Target",
       category: body.category || "general",
+      creature_type: rollDragonSpecies(),
     })
     .select()
     .single();

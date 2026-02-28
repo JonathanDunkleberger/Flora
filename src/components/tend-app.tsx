@@ -132,7 +132,7 @@ export function TendApp({
   const [showEggCallout, setShowEggCallout] = useState(false);
 
   // ── Creature naming state ──
-  const [namingHabit, setNamingHabit] = useState<{ id: string; name: string; stage: number; color: string } | null>(null);
+  const [namingHabit, setNamingHabit] = useState<{ id: string; name: string; stage: number; color: string; creatureType?: number | null } | null>(null);
   const prevStagesRef = useRef<Record<string, number>>({});
 
   // ── Share card state ──
@@ -146,6 +146,8 @@ export function TendApp({
     isQuit: boolean;
     cleanDays?: number;
     moneySaved?: number;
+    creatureType?: number | null;
+    habitId?: string;
   } | null>(null);
 
   // ── Tend+ tier state (server-verified via profiles.tier) ──
@@ -800,7 +802,7 @@ export function TendApp({
       const curr = currentStages[h.id];
       // Trigger naming when creature hatches (0 → 1) and has no name yet
       if (prev !== undefined && prev === 0 && curr >= 1 && !h.creature_name) {
-        setNamingHabit({ id: h.id, name: h.name, stage: curr, color: h.color });
+        setNamingHabit({ id: h.id, name: h.name, stage: curr, color: h.color, creatureType: h.creature_type });
         break; // only one naming at a time
       }
     }
@@ -822,6 +824,8 @@ export function TendApp({
       isQuit: dq,
       cleanDays: dq ? getCleanDays(h.id) : undefined,
       moneySaved: dq && qd ? (qd.dailyCost || 0) * getCleanDays(h.id) : undefined,
+      creatureType: h.creature_type,
+      habitId: h.id,
     });
   }, [quitDataMap, getStageForId, getStreak, getTotal, getCleanDays]);
 
@@ -1074,6 +1078,7 @@ export function TendApp({
           habitName={namingHabit.name}
           stage={namingHabit.stage}
           color={namingHabit.color}
+          creatureType={namingHabit.creatureType}
           onName={(name) => nameCreature(namingHabit.id, name)}
           onSkip={() => setNamingHabit(null)}
         />
@@ -1793,9 +1798,9 @@ export function TendApp({
               {/* Single hero creature — 140px, centered */}
               <div style={{ position: "relative", zIndex: 1 }}>
                 {dq ? (
-                  <Creature stage={Math.min(4, Math.floor(cleanD / 7))} color={detailHabit.color} happy={cleanD > 0} size={140} />
+                  <Creature stage={Math.min(4, Math.floor(cleanD / 7))} color={detailHabit.color} happy={cleanD > 0} size={140} creatureType={detailHabit.creature_type} habitId={detailHabit.id} />
                 ) : (
-                  <Creature stage={getStageForId(detailHabit.id)} color={detailHabit.color} happy={isHappy(detailHabit.id)} size={140} />
+                  <Creature stage={getStageForId(detailHabit.id)} color={detailHabit.color} happy={isHappy(detailHabit.id)} size={140} creatureType={detailHabit.creature_type} habitId={detailHabit.id} />
                 )}
               </div>
 
@@ -1874,7 +1879,7 @@ export function TendApp({
                   {/* Name your creature prompt — if not yet named and stage >= 1 */}
                   {!detailHabit.creature_name && getStageForId(detailHabit.id) >= 1 && (
                     <button
-                      onClick={() => setNamingHabit({ id: detailHabit.id, name: detailHabit.name, stage: getStageForId(detailHabit.id), color: detailHabit.color })}
+                      onClick={() => setNamingHabit({ id: detailHabit.id, name: detailHabit.name, stage: getStageForId(detailHabit.id), color: detailHabit.color, creatureType: detailHabit.creature_type })}
                       style={{
                         marginTop: 6, padding: "5px 14px", borderRadius: 100,
                         background: `${detailHabit.color}15`, border: `1px solid ${detailHabit.color}25`,

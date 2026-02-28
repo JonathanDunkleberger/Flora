@@ -1,6 +1,6 @@
 "use client";
 
-import { getCreatureColor, getCreatureSprite, CREATURE_SIZES } from "@/lib/sprites";
+import { getDragonSprite, deriveDragonFromId, CREATURE_SIZES } from "@/lib/sprites";
 
 interface CreatureProps {
   stage: number;
@@ -8,6 +8,10 @@ interface CreatureProps {
   happy?: boolean;
   size?: number;
   bounce?: boolean;
+  /** Dragon species (1-36). Falls back to hash-derived if omitted. */
+  creatureType?: number | null;
+  /** Habit id — used for deterministic fallback when creatureType is null */
+  habitId?: string;
 }
 
 /**
@@ -15,14 +19,14 @@ interface CreatureProps {
  * Used on detail pages (hero treatment), gallery, breathing timer, etc.
  *
  * – ONE image, never multiples
- * – imageRendering: pixelated for crisp pixel art
+ * – HD 2D art — smooth rendering (NOT pixelated)
  * – Idle float animation by default
  * – Colored glow behind creature when happy
  * – Bounce animation on interaction
  */
-export function Creature({ stage, color, happy = false, size, bounce = false }: CreatureProps) {
-  const creatureColor = getCreatureColor(color);
-  const spritePath = getCreatureSprite(stage, creatureColor);
+export function Creature({ stage, color, happy = false, size, bounce = false, creatureType, habitId }: CreatureProps) {
+  const species = creatureType || (habitId ? deriveDragonFromId(habitId) : 1);
+  const spritePath = getDragonSprite(stage, species);
   const displaySize = size || CREATURE_SIZES[stage] || 64;
 
   return (
@@ -54,7 +58,7 @@ export function Creature({ stage, color, happy = false, size, bounce = false }: 
         height={displaySize}
         draggable={false}
         style={{
-          imageRendering: "pixelated",
+          objectFit: "contain",
           display: "block",
           position: "relative",
           filter: happy ? "none" : "saturate(0.55) brightness(0.85)",

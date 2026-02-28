@@ -1,112 +1,177 @@
 /**
- * Sprite mapping for Sprout Lands pixel art assets.
- * Maps habit colors → creature sprite colors,
- * and provides paths for creatures at each evolution stage.
+ * Dragon sprite system for Tend.
  *
- * Native sprite sizes (px):
- *   egg       = 16×16
- *   baby      = 16×16
- *   chicken   = 32×32
- *   cow_baby  = 32×32
- *   cow       = 32×32
+ * 36 unique dragon species, each with a matching egg.
+ * High-res (~200px) 2D art — NOT pixel art.
  *
- * These are rendered at much larger display sizes via imageRendering: pixelated.
+ * Creatures are now dragons that hatch from eggs.
+ *   Stage 0 = Egg (matched to dragon species)
+ *   Stage 1+ = Dragon (same dragon at all post-hatch stages, grows via display size)
+ *
+ * Each habit gets a dragon species (1-36) assigned at creation via creature_type.
+ * Existing habits without creature_type get one derived from their id hash.
  */
 
+/** Total number of dragon species in the pack */
+export const DRAGON_COUNT = 36;
+
+/* ═══════════ DRAGON SPECIES DATABASE ═══════════ */
+
+export type DragonElement = "fire" | "water" | "nature" | "storm" | "shadow" | "light" | "cosmic";
+export type DragonRarity = "common" | "rare" | "legendary";
+
+export interface DragonSpecies {
+  id: number;
+  name: string;
+  element: DragonElement;
+  rarity: DragonRarity;
+  color: string;
+}
+
+/**
+ * 36 dragon species — grouped by element, with rarity tiers.
+ * 20 common, 10 rare, 6 legendary.
+ */
+export const DRAGON_SPECIES: DragonSpecies[] = [
+  // Fire (1-5)
+  { id: 1,  name: "Ember Drake",     element: "fire",   rarity: "common",    color: "#ef4444" },
+  { id: 2,  name: "Blaze Whelp",     element: "fire",   rarity: "common",    color: "#f97316" },
+  { id: 3,  name: "Cinder Wing",     element: "fire",   rarity: "rare",      color: "#dc2626" },
+  { id: 4,  name: "Magma Pup",       element: "fire",   rarity: "rare",      color: "#b91c1c" },
+  { id: 5,  name: "Inferno Fang",    element: "fire",   rarity: "legendary", color: "#ff6b35" },
+  // Water (6-10)
+  { id: 6,  name: "Splash Fin",      element: "water",  rarity: "common",    color: "#3b82f6" },
+  { id: 7,  name: "Tide Hatchling",  element: "water",  rarity: "common",    color: "#06b6d4" },
+  { id: 8,  name: "Reef Sprite",     element: "water",  rarity: "common",    color: "#0ea5e9" },
+  { id: 9,  name: "Coral Drake",     element: "water",  rarity: "rare",      color: "#0891b2" },
+  { id: 10, name: "Abyssal Serpent", element: "water",  rarity: "legendary", color: "#1e40af" },
+  // Nature (11-16)
+  { id: 11, name: "Sprout Drake",    element: "nature", rarity: "common",    color: "#22c55e" },
+  { id: 12, name: "Moss Hatchling",  element: "nature", rarity: "common",    color: "#16a34a" },
+  { id: 13, name: "Fern Wing",       element: "nature", rarity: "common",    color: "#4ade80" },
+  { id: 14, name: "Bloom Serpent",   element: "nature", rarity: "rare",      color: "#15803d" },
+  { id: 15, name: "Petal Drake",     element: "nature", rarity: "rare",      color: "#86efac" },
+  { id: 16, name: "Ancient Verdant", element: "nature", rarity: "legendary", color: "#065f46" },
+  // Storm (17-22)
+  { id: 17, name: "Spark Whelp",     element: "storm",  rarity: "common",    color: "#a855f7" },
+  { id: 18, name: "Zap Hatchling",   element: "storm",  rarity: "common",    color: "#8b5cf6" },
+  { id: 19, name: "Thunder Pup",     element: "storm",  rarity: "common",    color: "#7c3aed" },
+  { id: 20, name: "Bolt Wing",       element: "storm",  rarity: "rare",      color: "#6d28d9" },
+  { id: 21, name: "Storm Dancer",    element: "storm",  rarity: "rare",      color: "#eab308" },
+  { id: 22, name: "Tempest Lord",    element: "storm",  rarity: "legendary", color: "#4c1d95" },
+  // Shadow (23-28)
+  { id: 23, name: "Shade Whelp",     element: "shadow", rarity: "common",    color: "#6b7280" },
+  { id: 24, name: "Dusk Hatchling",  element: "shadow", rarity: "common",    color: "#4b5563" },
+  { id: 25, name: "Gloom Drake",     element: "shadow", rarity: "common",    color: "#374151" },
+  { id: 26, name: "Night Wing",      element: "shadow", rarity: "rare",      color: "#1f2937" },
+  { id: 27, name: "Phantom Fang",    element: "shadow", rarity: "rare",      color: "#111827" },
+  { id: 28, name: "Void Wyrm",       element: "shadow", rarity: "legendary", color: "#0a0a0a" },
+  // Light (29-33)
+  { id: 29, name: "Glow Whelp",      element: "light",  rarity: "common",    color: "#fbbf24" },
+  { id: 30, name: "Dawn Hatchling",  element: "light",  rarity: "common",    color: "#f59e0b" },
+  { id: 31, name: "Halo Drake",      element: "light",  rarity: "common",    color: "#fde68a" },
+  { id: 32, name: "Radiant Wing",    element: "light",  rarity: "rare",      color: "#fcd34d" },
+  { id: 33, name: "Solar Wyrm",      element: "light",  rarity: "legendary", color: "#f5f5f4" },
+  // Cosmic (34-36)
+  { id: 34, name: "Star Whelp",      element: "cosmic", rarity: "common",    color: "#ec4899" },
+  { id: 35, name: "Nebula Drake",    element: "cosmic", rarity: "rare",      color: "#d946ef" },
+  { id: 36, name: "Celestial Wyrm",  element: "cosmic", rarity: "rare",      color: "#c084fc" },
+];
+
+/** Get dragon species by id (1-indexed) */
+export function getDragonSpecies(id: number): DragonSpecies {
+  return DRAGON_SPECIES[(id - 1) % DRAGON_SPECIES.length] || DRAGON_SPECIES[0];
+}
+
+/* ═══════════ ELEMENT STYLING ═══════════ */
+
+export const ELEMENT_COLORS: Record<DragonElement, { bg: string; text: string; icon: string }> = {
+  fire:   { bg: "#ef444418", text: "#ef4444", icon: "🔥" },
+  water:  { bg: "#3b82f618", text: "#3b82f6", icon: "💧" },
+  nature: { bg: "#22c55e18", text: "#22c55e", icon: "🌿" },
+  storm:  { bg: "#a855f718", text: "#a855f7", icon: "⚡" },
+  shadow: { bg: "#6b728018", text: "#9ca3af", icon: "🌑" },
+  light:  { bg: "#fbbf2418", text: "#fbbf24", icon: "✨" },
+  cosmic: { bg: "#ec489918", text: "#ec4899", icon: "🌌" },
+};
+
+export const RARITY_COLORS: Record<DragonRarity, { bg: string; text: string; border: string; label: string }> = {
+  common:    { bg: "rgba(255,255,255,0.05)", text: "rgba(255,255,255,0.5)",  border: "rgba(255,255,255,0.1)",  label: "Common" },
+  rare:      { bg: "rgba(99,102,241,0.1)",   text: "#818cf8",               border: "rgba(99,102,241,0.25)",  label: "Rare" },
+  legendary: { bg: "rgba(250,204,21,0.1)",   text: "#fbbf24",               border: "rgba(250,204,21,0.25)",  label: "Legendary" },
+};
+
+/* ═══════════ SPECIES ASSIGNMENT ═══════════ */
+
+/** Assign a random dragon species (1-36) for a new habit. */
+export function rollDragonSpecies(): number {
+  return Math.floor(Math.random() * DRAGON_COUNT) + 1;
+}
+
+/** Derive a deterministic dragon species from a habit id (fallback for old habits). */
+export function deriveDragonFromId(habitId: string): number {
+  let hash = 0;
+  for (let i = 0; i < habitId.length; i++) {
+    hash = ((hash << 5) - hash + habitId.charCodeAt(i)) | 0;
+  }
+  return (Math.abs(hash) % DRAGON_COUNT) + 1;
+}
+
+/* ═══════════ SPRITE PATHS ═══════════ */
+
+/** Get the sprite path for a dragon. Stage 0 = egg, Stage 1+ = dragon. */
+export function getDragonSprite(stage: number, speciesId: number): string {
+  const num = String(Math.max(1, Math.min(speciesId, DRAGON_COUNT))).padStart(2, "0");
+  if (stage <= 0) return `/sprites/dragons/egg_${num}.png`;
+  return `/sprites/dragons/dragon_${num}.png`;
+}
+
+/** Legacy compat — kept so existing imports don't break. */
 export type CreatureColor = "default" | "red" | "blue" | "green" | "brown";
 
-/**
- * Map habit hex color to the closest creature sprite color.
- * 10 habit colors → 5 creature colors.
- */
-const COLOR_MAP: Record<string, CreatureColor> = {
-  "#6366f1": "blue",     // indigo → blue
-  "#ec4899": "red",      // pink → red
-  "#f59e0b": "default",  // amber → default (yellow)
-  "#10b981": "green",    // emerald → green
-  "#3b82f6": "blue",     // blue → blue
-  "#8b5cf6": "blue",     // violet → blue
-  "#ef4444": "red",      // red → red
-  "#14b8a6": "green",    // teal → green
-  "#f97316": "brown",    // orange → brown
-  "#06b6d4": "blue",     // cyan → blue
-  // Quit habit preset colors
-  "#27ae60": "green",    // quit-green → green
-  "#607d8b": "blue",     // blue-grey → blue
-  "#8e44ad": "blue",     // purple → blue
-  "#e74c3c": "red",      // quit-red → red
-  "#95a5a6": "default",  // grey → default
-  "#f39c12": "brown",    // yellow-orange → brown
-  "#d35400": "brown",    // burnt-orange → brown
-  "#455a64": "blue",     // dark-grey → blue
-  "#e67e22": "brown",    // orange → brown
-};
-
-export function getCreatureColor(hexColor: string): CreatureColor {
-  return COLOR_MAP[hexColor?.toLowerCase()] || "default";
+export function getCreatureColor(_hexColor: string): CreatureColor {
+  return "default";
 }
 
-/** Stage names for display */
-export const STAGE_NAMES = ["Egg", "Hatchling", "Young", "Growing", "Evolved"] as const;
-
-/**
- * Returns the public path to the creature sprite for a given stage and color.
- *
- * Stages:
- *   0 = Egg          (16×16 item sprite, single cohesive egg)
- *   1 = Hatchling    (16×16 baby chick, just hatched)
- *   2 = Young        (32×32 chicken, recognizable)
- *   3 = Growing      (32×32 baby cow, larger)
- *   4 = Evolved      (32×32 adult cow, full size)
- */
-export function getCreatureSprite(stage: number, color: CreatureColor): string {
-  const prefixes = ["egg", "baby", "chicken", "cow_baby", "cow"];
-  const prefix = prefixes[Math.min(Math.max(stage, 0), 4)];
-  return `/sprites/creatures/${prefix}_${color}.png`;
+export function getCreatureSprite(stage: number, _color: CreatureColor, speciesId?: number): string {
+  return getDragonSprite(stage, speciesId || 1);
 }
 
-/**
- * Display size (px) for each creature stage ON THE PLANET.
- * These are the rendered sizes — large enough to see pixel art clearly.
- */
+/** Display size (px) for each creature stage ON THE PLANET. HD art = bigger sizes. */
 export const CREATURE_SIZES: Record<number, number> = {
-  0: 48,  // egg
-  1: 56,  // hatchling
-  2: 64,  // young chicken
-  3: 72,  // growing cow baby
-  4: 80,  // evolved adult cow
+  0: 44,
+  1: 52,
+  2: 58,
+  3: 66,
+  4: 74,
 };
 
-/** Detail page hero size — always large for emotional impact */
-export const CREATURE_HERO_SIZE = 140;
+/** Detail page hero size */
+export const CREATURE_HERO_SIZE = 160;
 
-/**
- * Shop/world item sprite paths.
- * Falls back to null if not found.
- */
+/** Stage names — dragon-themed */
+export const STAGE_NAMES = ["Egg", "Hatchling", "Whelp", "Drake", "Elder Dragon"] as const;
+
+/* ═══════════ SHOP SPRITES (unchanged) ═══════════ */
+
 const SHOP_SPRITE_MAP: Record<string, string> = {
-  // Landscape
-  "pond": "/sprites/world/stone_large.png",  // placeholder — no pond in pack
+  "pond": "/sprites/world/stone_large.png",
   "bridge": "/sprites/shop/bridge.png",
-  "bench": "/sprites/shop/picnic.png",       // picnic blanket as bench
+  "bench": "/sprites/shop/picnic.png",
   "fence": "/sprites/shop/fence.png",
   "stone-path": "/sprites/world/stone_small.png",
-  // Trees
   "sakura": "/sprites/world/tree_large.png",
   "pine": "/sprites/world/tree_medium.png",
   "willow": "/sprites/world/big_tree.png",
   "oak": "/sprites/world/tree_large.png",
-  // Flowers
   "tulips": "/sprites/world/flower_pink.png",
   "sunflowers": "/sprites/world/flower_yellow.png",
   "roses": "/sprites/world/flower_pink.png",
   "lavender": "/sprites/world/flower_blue.png",
-  // Decorations
-  "lantern": "/sprites/shop/sign.png",       // signpost
+  "lantern": "/sprites/shop/sign.png",
   "mushrooms": "/sprites/world/mushroom_red.png",
   "rock-garden": "/sprites/world/stone_large.png",
-  "birdhouse": "/sprites/shop/well.png",     // well as birdhouse
-  // New items from the pack
+  "birdhouse": "/sprites/shop/well.png",
   "well": "/sprites/shop/well.png",
   "boat": "/sprites/shop/boat.png",
   "sign": "/sprites/shop/sign.png",

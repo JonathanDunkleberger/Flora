@@ -15,6 +15,8 @@ interface ShareCardProps {
   isQuit: boolean;
   cleanDays?: number;
   moneySaved?: number;
+  creatureType?: number | null;
+  habitId?: string;
   onClose: () => void;
 }
 
@@ -33,6 +35,8 @@ export function ShareCard({
   isQuit,
   cleanDays = 0,
   moneySaved = 0,
+  creatureType,
+  habitId,
   onClose,
 }: ShareCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -143,7 +147,7 @@ export function ShareCard({
 
         {/* Hero creature */}
         <div style={{ marginBottom: 12 }}>
-          <Creature stage={stage} color={color} happy size={120} />
+          <Creature stage={stage} color={color} happy size={120} creatureType={creatureType} habitId={habitId} />
         </div>
 
         {/* Creature name */}

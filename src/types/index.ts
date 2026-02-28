@@ -23,6 +23,7 @@ export interface Habit {
   is_paused: boolean;
   sort_order: number;
   creature_name: string | null;
+  creature_type: number | null;
   created_at: string;
   updated_at: string;
 }
