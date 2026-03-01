@@ -1,6 +1,6 @@
 "use client";
 
-import { X, Infinity, TrendingUp, TreePine, Sparkles } from "lucide-react";
+import { X, Infinity, TrendingUp, TreePine, Sparkles, Egg } from "lucide-react";
 
 interface TendPlusScreenProps {
   onClose: () => void;
@@ -13,6 +13,11 @@ export function TendPlusScreen({ onClose, onSubscribe }: TendPlusScreenProps) {
       Icon: Infinity,
       title: "Unlimited habits",
       desc: "Track everything that matters to your recovery",
+    },
+    {
+      Icon: Egg,
+      title: "Choose your dragon",
+      desc: "Pick from 36 unique species across 7 elements",
     },
     {
       Icon: TrendingUp,

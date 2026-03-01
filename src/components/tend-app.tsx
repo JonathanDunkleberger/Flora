@@ -32,6 +32,7 @@ import type { CoinTier } from "@/components/milestone-coin";
 import { MorningCheckin } from "@/components/morning-checkin";
 import { CreatureNamingModal } from "@/components/creature-naming-modal";
 import { ShareCard } from "@/components/share-card";
+import { EggPicker } from "@/components/egg-picker";
 import { getStage, getIcon, today, daysAgo, daysBetween, fmtDuration, fmtMoney, fmtQuitDate, haptic, getGreeting, formatLiveTimer } from "@/lib/utils";
 import {
   MILESTONES, STAGE_LABELS, STAGE_THRESHOLDS,
@@ -130,6 +131,11 @@ export function TendApp({
 
   // ── Egg callout tooltip for first quit habit ──
   const [showEggCallout, setShowEggCallout] = useState(false);
+
+  // ── Egg picker state (Pro feature: choose your dragon) ──
+  const [pendingHabit, setPendingHabit] = useState<{ name: string; color: string; iconName: string; cat: string; dailyCost: number } | null>(null);
+  const [pickedEgg, setPickedEgg] = useState<number | null>(null);
+  const [rePickEggId, setRePickEggId] = useState<string | null>(null); // habit id for re-picking egg on detail page
 
   // ── Creature naming state ──
   const [namingHabit, setNamingHabit] = useState<{ id: string; name: string; stage: number; color: string; creatureType?: number | null } | null>(null);
@@ -750,11 +756,11 @@ export function TendApp({
 
   const [addError, setAddError] = useState("");
 
-  const addHabit = async (name: string, color: string, iconName: string, cat: string = "general", dailyCost: number = 0) => {
+  const addHabit = async (name: string, color: string, iconName: string, cat: string = "general", dailyCost: number = 0, creatureType?: number) => {
     setAddError("");
     const result = await apiCall<HabitWithStats>("/api/habits", {
       method: "POST",
-      body: { name, color, icon_name: iconName, category: cat },
+      body: { name, color, icon_name: iconName, category: cat, creature_type: creatureType },
       onError: (msg) => setAddError(msg),
     });
     if (result.ok && result.data) {
@@ -775,7 +781,28 @@ export function TendApp({
       }
       setPage("main");
       setCName("");
+      setPendingHabit(null);
+      setPickedEgg(null);
     }
+  };
+
+  /** Route habit creation through egg picker for pro users */
+  const startAddHabit = (name: string, color: string, iconName: string, cat: string = "general", dailyCost: number = 0) => {
+    if (isTendPlus()) {
+      // Pro: show egg picker first
+      setPendingHabit({ name, color, iconName, cat, dailyCost });
+      setPickedEgg(null);
+    } else {
+      // Free: random egg, create immediately
+      addHabit(name, color, iconName, cat, dailyCost);
+    }
+  };
+
+  /** Called when pro user picks an egg and confirms */
+  const confirmEggPick = (speciesId: number) => {
+    if (!pendingHabit) return;
+    const { name, color, iconName, cat, dailyCost } = pendingHabit;
+    addHabit(name, color, iconName, cat, dailyCost, speciesId);
   };
 
   // ── Creature naming: save name to server ──
@@ -1087,6 +1114,41 @@ export function TendApp({
       {/* Share milestone card */}
       {shareCardData && (
         <ShareCard {...shareCardData} onClose={() => setShareCardData(null)} />
+      )}
+
+      {/* Egg picker (Pro feature) — new habit creation */}
+      {pendingHabit && (
+        <EggPicker
+          selected={pickedEgg}
+          isPro={isTendPlus()}
+          th={th}
+          onPick={(speciesId) => {
+            setPickedEgg(speciesId);
+            confirmEggPick(speciesId);
+          }}
+          onClose={() => { setPendingHabit(null); setPickedEgg(null); }}
+          onProTap={() => { setPendingHabit(null); setPickedEgg(null); setShowPaywall(true); }}
+        />
+      )}
+
+      {/* Egg picker (Pro feature) — re-pick on detail page */}
+      {rePickEggId && (
+        <EggPicker
+          selected={pickedEgg}
+          isPro={isTendPlus()}
+          th={th}
+          onPick={(speciesId) => {
+            // Update creature_type on the existing habit
+            setHabits((prev) => prev.map((h) => h.id === rePickEggId ? { ...h, creature_type: speciesId } : h));
+            apiSync(`/api/habits/${rePickEggId}`, "PATCH", { creature_type: speciesId });
+            setRePickEggId(null);
+            setPickedEgg(null);
+            haptic("success");
+            setCoinToast({ msg: "Egg swapped! 🥚", icon: Sparkles });
+          }}
+          onClose={() => { setRePickEggId(null); setPickedEgg(null); }}
+          onProTap={() => { setRePickEggId(null); setPickedEgg(null); setShowPaywall(true); }}
+        />
       )}
 
       {/* Urge support full screen */}
@@ -1890,6 +1952,31 @@ export function TendApp({
                       ✨ Name your creature
                     </button>
                   )}
+                  {/* Re-pick egg — only for unhatched (stage 0) */}
+                  {getStageForId(detailHabit.id) === 0 && (
+                    <button
+                      onClick={() => {
+                        if (isTendPlus()) {
+                          setRePickEggId(detailHabit.id);
+                          setPickedEgg(detailHabit.creature_type);
+                        } else {
+                          setShowPaywall(true);
+                        }
+                      }}
+                      style={{
+                        marginTop: 6, padding: "5px 14px", borderRadius: 100,
+                        background: isTendPlus() ? `${detailHabit.color}15` : "rgba(255,255,255,0.04)",
+                        border: `1px solid ${isTendPlus() ? `${detailHabit.color}25` : "rgba(255,255,255,0.08)"}`,
+                        color: isTendPlus() ? detailHabit.color : "rgba(255,255,255,0.4)",
+                        fontSize: 11, fontWeight: 600,
+                        cursor: "pointer", fontFamily: "inherit",
+                        display: "flex", alignItems: "center", gap: 4,
+                      }}
+                    >
+                      🥚 {isTendPlus() ? "Change egg" : "Choose egg"}
+                      {!isTendPlus() && <Crown size={10} color="#fbbf24" />}
+                    </button>
+                  )}
                 </>
               )}
 
@@ -2331,7 +2418,7 @@ export function TendApp({
                       return (
                         <button key={p.name} className="pb" style={{
                           background: th.card, borderColor: th.cardBorder, color: th.text,
-                        }} onClick={() => addHabit(p.name, p.color, p.iconName, "quit", p.cost)}>
+                        }} onClick={() => startAddHabit(p.name, p.color, p.iconName, "quit", p.cost)}>
                           <Ic size={14} color={p.color} />{p.name}
                         </button>
                       );
@@ -2356,7 +2443,7 @@ export function TendApp({
                       return (
                         <button key={p.name} className="pb" style={{
                           background: th.card, borderColor: th.cardBorder, color: th.text,
-                        }} onClick={() => addHabit(p.name, p.color, p.iconName)}>
+                        }} onClick={() => startAddHabit(p.name, p.color, p.iconName)}>
                           <Ic size={14} color={p.color} />{p.name}
                         </button>
                       );
@@ -2398,11 +2485,11 @@ export function TendApp({
                 <input
                   ref={inputRef} className="inp" placeholder="Habit name..." value={cName}
                   onChange={(e) => setCName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && cName.trim()) addHabit(cName.trim(), cColor, "Target"); }}
+                  onKeyDown={(e) => { if (e.key === "Enter" && cName.trim()) startAddHabit(cName.trim(), cColor, "Target"); }}
                   style={{ background: th.inputBg, borderColor: th.inputBorder, color: th.text }}
                 />
                 <button
-                  onClick={() => { if (cName.trim()) addHabit(cName.trim(), cColor, "Target"); }}
+                  onClick={() => { if (cName.trim()) startAddHabit(cName.trim(), cColor, "Target"); }}
                   style={{
                     padding: "0 18px", borderRadius: 12,
                     background: cName.trim() ? "linear-gradient(135deg,#4caf50,#2e7d32)" : th.progressBg,

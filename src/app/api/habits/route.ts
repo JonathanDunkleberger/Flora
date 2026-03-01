@@ -58,7 +58,9 @@ export async function POST(request: Request) {
       color: body.color || "#6366f1",
       icon_name: body.icon_name || "Target",
       category: body.category || "general",
-      creature_type: rollDragonSpecies(),
+      creature_type: (typeof body.creature_type === "number" && body.creature_type >= 1 && body.creature_type <= 36)
+        ? body.creature_type
+        : rollDragonSpecies(),
     })
     .select()
     .single();
