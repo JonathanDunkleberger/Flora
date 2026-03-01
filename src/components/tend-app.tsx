@@ -188,18 +188,8 @@ export function TendApp({
   const [liveNow, setLiveNow] = useState(Date.now());
 
   const isTendPlus = useCallback((): boolean => {
-    if (!isPro) return false;
-    if (proExpiry && new Date(proExpiry) < new Date()) {
-      setIsPro(false);
-      setProExpiry(null);
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("tend_pro");
-        localStorage.removeItem("tend_pro_expiry");
-      }
-      return false;
-    }
-    return true;
-  }, [isPro, proExpiry]);
+    return isPro;
+  }, [isPro]);
 
   useEffect(() => {
     setTimeout(() => setMounted(true), 50);
@@ -307,16 +297,55 @@ export function TendApp({
   }, [isPro, proExpiry]);
 
   // Handle ?upgraded=true URL param from Stripe redirect
+  // Also poll the server to confirm the webhook has landed
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("upgraded") === "true") {
+    const justUpgraded = params.get("upgraded") === "true";
+
+    if (justUpgraded) {
+      // Activate pro immediately so UI feels instant
       setIsPro(true);
-      setProExpiry(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString());
       setShowPaywall(false);
       setCoinToast({ msg: "Welcome to Tend+!", icon: Sparkles });
       // Clean the URL
       window.history.replaceState({}, "", window.location.pathname);
+
+      // Poll server to confirm webhook has landed (profile.tier = "pro")
+      // Stripe webhooks can take a few seconds — retry up to 10 times
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts++;
+        try {
+          const res = await fetch("/api/pro-status");
+          const data = await res.json();
+          if (data.isPro) {
+            clearInterval(poll);
+            // Server confirmed — pro is now durable
+          }
+        } catch { /* ignore network errors during polling */ }
+        if (attempts >= 10) clearInterval(poll);
+      }, 2000);
+
+      return () => clearInterval(poll);
+    }
+
+    // On regular mount: if localStorage says pro but server said free,
+    // re-check the server in case the webhook arrived late
+    if (!initialIsPro && typeof window !== "undefined" && localStorage.getItem("tend_pro") === "1") {
+      fetch("/api/pro-status")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.isPro) {
+            setIsPro(true);
+          } else {
+            // Server confirmed free — clear stale localStorage
+            setIsPro(false);
+            localStorage.removeItem("tend_pro");
+            localStorage.removeItem("tend_pro_expiry");
+          }
+        })
+        .catch(() => { /* offline — keep localStorage state */ });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -761,7 +790,14 @@ export function TendApp({
     const result = await apiCall<HabitWithStats>("/api/habits", {
       method: "POST",
       body: { name, color, icon_name: iconName, category: cat, creature_type: creatureType },
-      onError: (msg) => setAddError(msg),
+      onError: (msg) => {
+        setAddError(msg);
+        // Show toast so error is visible even when egg picker is open
+        setCoinToast({ msg, icon: X });
+        // Close egg picker if open so user sees the error
+        setPendingHabit(null);
+        setPickedEgg(null);
+      },
     });
     if (result.ok && result.data) {
       const newHabit = result.data;
@@ -1122,6 +1158,9 @@ export function TendApp({
           selected={pickedEgg}
           isPro={isTendPlus()}
           th={th}
+          onSelect={(speciesId) => {
+            setPickedEgg(speciesId);
+          }}
           onPick={(speciesId) => {
             setPickedEgg(speciesId);
             confirmEggPick(speciesId);
@@ -1137,6 +1176,9 @@ export function TendApp({
           selected={pickedEgg}
           isPro={isTendPlus()}
           th={th}
+          onSelect={(speciesId) => {
+            setPickedEgg(speciesId);
+          }}
           onPick={(speciesId) => {
             // Update creature_type on the existing habit
             setHabits((prev) => prev.map((h) => h.id === rePickEggId ? { ...h, creature_type: speciesId } : h));
@@ -1206,20 +1248,24 @@ export function TendApp({
           onSubscribe={async (plan) => {
             const activateLocally = () => {
               setIsPro(true);
-              setProExpiry(new Date(Date.now() + (plan === "annual" ? 365 : 30) * 24 * 60 * 60 * 1000).toISOString());
               setShowPaywall(false);
               setCoinToast({ msg: "Welcome to Tend+!", icon: Sparkles });
             };
-            const result = await apiCall<{ url?: string }>("/api/checkout", {
+            const result = await apiCall<{ url?: string; devMode?: boolean }>("/api/checkout", {
               method: "POST",
               body: { plan },
-              onError: () => activateLocally(),
+              onError: (msg) => {
+                setCoinToast({ msg: `Checkout error: ${msg}`, icon: X });
+              },
             });
             if (result.ok && result.data?.url) {
+              // Real Stripe: redirect to checkout
               window.location.href = result.data.url;
-            } else {
+            } else if (result.ok && result.data?.devMode) {
+              // Dev mode: no Stripe configured, activate locally
               activateLocally();
             }
+            // On error: don't activate — user needs to retry
           }}
         />
       )}

@@ -16,8 +16,10 @@ interface EggPickerProps {
   isPro: boolean;
   /** Theme colors */
   th: ThemeColors;
-  /** Fires with the chosen species id */
+  /** Fires with the chosen species id when user CONFIRMS (Hatch button) */
   onPick: (speciesId: number) => void;
+  /** Optional: fires when user taps an egg in the grid (selection only) */
+  onSelect?: (speciesId: number) => void;
   /** Close / cancel */
   onClose: () => void;
   /** Free user tapped a locked egg — show paywall */
@@ -40,9 +42,11 @@ const FREE_EGG_COUNT = 6;
 /** Which species ids are free (first N common ones spread across elements) */
 const FREE_SPECIES_IDS = [1, 6, 11, 17, 23, 29]; // one common from each major element
 
-export function EggPicker({ selected, isPro, th, onPick, onClose, onProTap }: EggPickerProps) {
+export function EggPicker({ selected, isPro, th, onPick, onSelect, onClose, onProTap }: EggPickerProps) {
   const [filter, setFilter] = useState<DragonElement | "all">("all");
   const [hoveredId, setHoveredId] = useState<number | null>(null);
+  // Internal selection state so grid taps don't immediately confirm
+  const [localSelected, setLocalSelected] = useState<number | null>(selected);
 
   const filtered = filter === "all"
     ? DRAGON_SPECIES
@@ -127,7 +131,7 @@ export function EggPicker({ selected, isPro, th, onPick, onClose, onProTap }: Eg
         }}>
           {filtered.map((dragon) => {
             const unlocked = isUnlocked(dragon.id);
-            const isSelected = selected === dragon.id;
+            const isSelected = localSelected === dragon.id;
             const isHovered = hoveredId === dragon.id;
             const eggPath = getDragonSprite(0, dragon.id);
             const dragonPath = getDragonSprite(1, dragon.id);
@@ -139,7 +143,8 @@ export function EggPicker({ selected, isPro, th, onPick, onClose, onProTap }: Eg
                 key={dragon.id}
                 onClick={() => {
                   if (unlocked) {
-                    onPick(dragon.id);
+                    setLocalSelected(dragon.id);
+                    onSelect?.(dragon.id);
                   } else {
                     onProTap?.();
                   }
@@ -274,23 +279,23 @@ export function EggPicker({ selected, isPro, th, onPick, onClose, onProTap }: Eg
         </button>
         <button
           onClick={() => {
-            if (selected) onPick(selected);
+            if (localSelected) onPick(localSelected);
           }}
-          disabled={!selected}
+          disabled={!localSelected}
           style={{
             flex: 2, padding: "14px 0", borderRadius: 14, border: "none",
-            background: selected
-              ? `linear-gradient(135deg, ${ELEMENT_COLORS[getDragonSpecies(selected).element].text}, ${ELEMENT_COLORS[getDragonSpecies(selected).element].text}cc)`
+            background: localSelected
+              ? `linear-gradient(135deg, ${ELEMENT_COLORS[getDragonSpecies(localSelected).element].text}, ${ELEMENT_COLORS[getDragonSpecies(localSelected).element].text}cc)`
               : "rgba(255,255,255,0.06)",
-            color: selected ? "white" : "rgba(255,255,255,0.2)",
-            fontSize: 15, fontWeight: 700, cursor: selected ? "pointer" : "default",
+            color: localSelected ? "white" : "rgba(255,255,255,0.2)",
+            fontSize: 15, fontWeight: 700, cursor: localSelected ? "pointer" : "default",
             fontFamily: "'Fraunces',serif",
             transition: "all 0.2s",
-            boxShadow: selected ? `0 4px 20px ${ELEMENT_COLORS[getDragonSpecies(selected).element].text}44` : "none",
+            boxShadow: localSelected ? `0 4px 20px ${ELEMENT_COLORS[getDragonSpecies(localSelected).element].text}44` : "none",
           }}
         >
-          {selected
-            ? `Hatch ${getDragonSpecies(selected).name}`
+          {localSelected
+            ? `Hatch ${getDragonSpecies(localSelected).name}`
             : "Select an egg"}
         </button>
       </div>
