@@ -72,10 +72,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ url: session.url });
   } catch (error: unknown) {
     console.error("Stripe checkout error:", error);
-    // FALLBACK: return dev mode so user is never stuck
-    return NextResponse.json({
-      devMode: true,
-      message: "Checkout error — using dev mode fallback",
-    });
+    return NextResponse.json(
+      { error: "Something went wrong creating the checkout session. Please try again." },
+      { status: 500 }
+    );
   }
 }

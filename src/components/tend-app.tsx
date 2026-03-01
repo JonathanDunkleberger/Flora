@@ -305,7 +305,7 @@ export function TendApp({
       window.history.replaceState({}, "", window.location.pathname);
 
       // Poll server to confirm webhook has landed (profile.tier = "pro")
-      // Stripe webhooks can take a few seconds — retry up to 10 times
+      // Stripe webhooks can take a few seconds — retry up to 5 times
       let attempts = 0;
       const poll = setInterval(async () => {
         attempts++;
@@ -315,38 +315,58 @@ export function TendApp({
           if (data.isPro) {
             clearInterval(poll);
             // Server confirmed — pro is now durable
+            return;
           }
         } catch { /* ignore network errors during polling */ }
-        if (attempts >= 10) {
+
+        if (attempts >= 5) {
           clearInterval(poll);
-          // Webhook never landed — revert optimistic pro status
-          // Re-check one final time
-          fetch("/api/pro-status")
-            .then((r) => r.json())
-            .then((data) => {
-              if (!data.isPro) {
-                setIsPro(false);
-                setCoinToast({ msg: "Subscription verification pending — please reload in a moment", icon: X });
-              }
-            })
-            .catch(() => {});
+          // Webhook hasn't landed after 10s — verify directly with Stripe
+          // This bypasses the webhook entirely and updates the DB
+          try {
+            const verifyRes = await fetch("/api/verify-subscription", { method: "POST" });
+            const verifyData = await verifyRes.json();
+            if (verifyData.isPro) {
+              setIsPro(true);
+              // DB is now updated — pro is durable
+            } else {
+              // Stripe says no active subscription — payment may have failed
+              setIsPro(false);
+              setCoinToast({ msg: "Subscription not found — payment may not have completed", icon: X });
+            }
+          } catch {
+            // Network error — keep optimistic pro, will re-verify on next mount
+          }
         }
       }, 2000);
 
       return () => clearInterval(poll);
     }
 
-    // On every mount: verify pro status with the server to catch
-    // subscription cancellations, webhook updates, etc.
-    // The server page load already sets initialIsPro, but if the page was
-    // cached or the subscription changed between loads, this catches it.
+    // On every mount: verify pro status with the server.
+    // First check DB (fast), then if DB says free, verify with Stripe directly
+    // in case webhooks were missed.
     fetch("/api/pro-status")
       .then((r) => r.json())
       .then((data) => {
-        if (data.isPro && !isPro) {
-          setIsPro(true);
-        } else if (!data.isPro && isPro) {
-          setIsPro(false);
+        if (data.isPro) {
+          if (!isPro) setIsPro(true);
+        } else {
+          // DB says free — but maybe a webhook was missed.
+          // Only verify with Stripe if the user was previously showing as pro
+          // (avoids unnecessary Stripe API calls for actual free users)
+          if (isPro) {
+            fetch("/api/verify-subscription", { method: "POST" })
+              .then((r) => r.json())
+              .then((v) => {
+                if (v.isPro) {
+                  setIsPro(true);
+                } else {
+                  setIsPro(false);
+                }
+              })
+              .catch(() => { setIsPro(false); });
+          }
         }
       })
       .catch(() => { /* offline — trust server-rendered initialIsPro */ });
@@ -794,18 +814,30 @@ export function TendApp({
       body: { name, color, icon_name: iconName, category: cat, creature_type: creatureType },
       onError: (msg) => {
         setAddError(msg);
-        // Show toast so error is visible even when egg picker is open
-        setCoinToast({ msg, icon: X });
         // Close egg picker if open so user sees the error
         setPendingHabit(null);
         setPickedEgg(null);
-        // If server says free plan limit, re-sync pro status from server
-        // (client may have stale isPro state)
+        // If server says free plan limit, verify subscription directly with Stripe
+        // This fixes the case where webhook didn't fire but payment went through
         if (msg.toLowerCase().includes("free plan") || msg.toLowerCase().includes("upgrade")) {
-          fetch("/api/pro-status")
+          setCoinToast({ msg: "Verifying your subscription...", icon: Sparkles });
+          fetch("/api/verify-subscription", { method: "POST" })
             .then((r) => r.json())
-            .then((data) => { setIsPro(data.isPro); })
-            .catch(() => {});
+            .then((data) => {
+              if (data.isPro) {
+                setIsPro(true);
+                setCoinToast({ msg: "Subscription verified! Please try again.", icon: Sparkles });
+                setAddError("");
+              } else {
+                setIsPro(false);
+                setCoinToast({ msg, icon: X });
+              }
+            })
+            .catch(() => {
+              setCoinToast({ msg, icon: X });
+            });
+        } else {
+          setCoinToast({ msg, icon: X });
         }
       },
     });
