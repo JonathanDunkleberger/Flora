@@ -2354,7 +2354,7 @@ export function TendApp({
             {habits.length > 0 && (
               <MultiHabitHeatmap habits={habits} isDone={isComplete} getCleanDays={getCleanDays} th={th} />
             )}
-            <Constellation habits={habits} isDone={isComplete} getStreak={getStreak} getTotal={getTotal} getCleanDays={getCleanDays} th={th} isPro={isTendPlus()} onUpgrade={() => setShowPaywall(true)} />
+            <Constellation habits={habits} isDone={isComplete} getStreak={getStreak} getTotal={getTotal} getCleanDays={getCleanDays} getBestStreak={getBestStreak} getStage={getStageForId} th={th} isPro={isTendPlus()} onUpgrade={() => setShowPaywall(true)} />
           </div>
         )}
 
