@@ -40,10 +40,11 @@ export async function POST(req: Request) {
 
     const supabase = await createServerSupabaseClient();
 
-    // Get profile
+    // Get profile — MUST filter by clerk_id (service-role key bypasses RLS)
     const { data: profile } = await supabase
       .from("profiles")
       .select("email, stripe_customer_id")
+      .eq("clerk_id", userId)
       .single();
 
     const origin = req.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "https://tendhabit.com";

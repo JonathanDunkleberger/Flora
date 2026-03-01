@@ -161,7 +161,6 @@ export function TendApp({
 
   // ── Tend+ tier state (server-verified via profiles.tier) ──
   const [isPro, setIsPro] = useState(initialIsPro);
-  const [proExpiry, setProExpiry] = useState<string | null>(null);
   const [lastBonusDate, setLastBonusDate] = useState<string | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
   const [showPremiumPrompt, setShowPremiumPrompt] = useState(false);
@@ -290,15 +289,6 @@ export function TendApp({
     apiSync("/api/preferences", "PUT", { dark_mode: darkMode, season });
   }, [darkMode, season]);
 
-  // Persist Tend+ state
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("tend_pro", isPro ? "1" : "0");
-      if (proExpiry) localStorage.setItem("tend_pro_expiry", proExpiry);
-      else localStorage.removeItem("tend_pro_expiry");
-    }
-  }, [isPro, proExpiry]);
-
   // Handle ?upgraded=true URL param from Stripe redirect
   // Also poll the server to confirm the webhook has landed
   useEffect(() => {
@@ -327,29 +317,39 @@ export function TendApp({
             // Server confirmed — pro is now durable
           }
         } catch { /* ignore network errors during polling */ }
-        if (attempts >= 10) clearInterval(poll);
+        if (attempts >= 10) {
+          clearInterval(poll);
+          // Webhook never landed — revert optimistic pro status
+          // Re-check one final time
+          fetch("/api/pro-status")
+            .then((r) => r.json())
+            .then((data) => {
+              if (!data.isPro) {
+                setIsPro(false);
+                setCoinToast({ msg: "Subscription verification pending — please reload in a moment", icon: X });
+              }
+            })
+            .catch(() => {});
+        }
       }, 2000);
 
       return () => clearInterval(poll);
     }
 
-    // On regular mount: if localStorage says pro but server said free,
-    // re-check the server in case the webhook arrived late
-    if (!initialIsPro && typeof window !== "undefined" && localStorage.getItem("tend_pro") === "1") {
-      fetch("/api/pro-status")
-        .then((r) => r.json())
-        .then((data) => {
-          if (data.isPro) {
-            setIsPro(true);
-          } else {
-            // Server confirmed free — clear stale localStorage
-            setIsPro(false);
-            localStorage.removeItem("tend_pro");
-            localStorage.removeItem("tend_pro_expiry");
-          }
-        })
-        .catch(() => { /* offline — keep localStorage state */ });
-    }
+    // On every mount: verify pro status with the server to catch
+    // subscription cancellations, webhook updates, etc.
+    // The server page load already sets initialIsPro, but if the page was
+    // cached or the subscription changed between loads, this catches it.
+    fetch("/api/pro-status")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.isPro && !isPro) {
+          setIsPro(true);
+        } else if (!data.isPro && isPro) {
+          setIsPro(false);
+        }
+      })
+      .catch(() => { /* offline — trust server-rendered initialIsPro */ });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -378,7 +378,6 @@ export function TendApp({
       ref.count = 0;
       const newPro = !isPro;
       setIsPro(newPro);
-      setProExpiry(newPro ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() : null);
       setCoinToast({ msg: newPro ? "Tend+ enabled (dev)" : "Tend+ disabled (dev)", icon: Sparkles });
     }
   }, [isPro]);
@@ -800,6 +799,14 @@ export function TendApp({
         // Close egg picker if open so user sees the error
         setPendingHabit(null);
         setPickedEgg(null);
+        // If server says free plan limit, re-sync pro status from server
+        // (client may have stale isPro state)
+        if (msg.toLowerCase().includes("free plan") || msg.toLowerCase().includes("upgrade")) {
+          fetch("/api/pro-status")
+            .then((r) => r.json())
+            .then((data) => { setIsPro(data.isPro); })
+            .catch(() => {});
+        }
       },
     });
     if (result.ok && result.data) {
