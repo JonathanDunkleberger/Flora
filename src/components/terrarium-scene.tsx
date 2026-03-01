@@ -56,30 +56,49 @@ export function TerrariumScene({
   const progressBonus = pct * 8;
   const pr = baseRadius + habitBonus + progressBonus;
 
-  // ── CREATURE PLACEMENT: spread creatures around more of the planet ──
-  // Uses predefined arcs — wider spread for small counts to use the space
+  // ── CREATURE PLACEMENT ──
+  // Creatures sit on the upper hemisphere of the planet.
+  // Angle 0 = straight up (top of planet). Negative = left, positive = right.
+  // We scale the arc width based on habit count:
+  //   1-3: tight arc in upper crown (±40°)
+  //   4-5: medium arc (±70°)
+  //   6-9: wide arc (±100°)
+  //  10-12: full upper hemisphere (±120°)
+  // Only first 12 habits appear on planet. Beyond that, they're in the list only.
   const N = habits.length;
-  const creatureAngles = habits.map((h, i) => {
-    // Base angles (degrees from top, 0 = top center)
-    // Wider arcs for small counts so they're not all clustered at top
-    let baseAngle: number;
-    if (N === 1) baseAngle = -15; // slightly off-center for visual interest
-    else if (N === 2) baseAngle = [-55, 55][i];
-    else if (N === 3) baseAngle = [-80, 15, 80][i]; // wide triangle, one near top
-    else if (N === 4) baseAngle = [-100, -30, 40, 110][i];
-    else if (N === 5) baseAngle = [-110, -55, 0, 55, 110][i];
-    else baseAngle = -130 + (260 / (N - 1)) * i; // 6+: evenly from -130 to +130
+  const maxOnPlanet = 12;
+  const planetHabits = habits.slice(0, maxOnPlanet);
+  const Np = planetHabits.length;
 
-    // Seeded jitter: ±5° angle, ±3px radial
+  const creatureAngles = planetHabits.map((h, i) => {
+    let baseAngle: number;
+    if (Np === 1) {
+      baseAngle = 0; // dead center top
+    } else if (Np === 2) {
+      baseAngle = [-30, 30][i];
+    } else if (Np === 3) {
+      baseAngle = [-40, 0, 40][i];
+    } else if (Np === 4) {
+      baseAngle = [-55, -18, 18, 55][i];
+    } else if (Np === 5) {
+      baseAngle = [-70, -35, 0, 35, 70][i];
+    } else {
+      // 6-12: evenly distribute across arc that widens with count
+      const arcHalf = Math.min(120, 50 + Np * 7); // 92° at 6, 120° at 10+
+      baseAngle = Np === 1 ? 0 : -arcHalf + (2 * arcHalf / (Np - 1)) * i;
+    }
+
+    // Seeded jitter: ±4° angle
     const hashVal = h.id.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-    const jitterAngle = ((hashVal * 7 + 13) % 100) / 100 * 10 - 5; // ±5°
+    const jitterAngle = ((hashVal * 7 + 13) % 100) / 100 * 8 - 4;
     const angleDeg = baseAngle + jitterAngle;
     return -90 + angleDeg; // convert to math angle (top = -90°)
   });
-  // Per-creature radial jitter
-  const creatureRadialJitter = habits.map((h) => {
+
+  // Per-creature radial jitter: ±3px
+  const creatureRadialJitter = planetHabits.map((h) => {
     const hashVal = h.id.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-    return ((hashVal * 11 + 29) % 100) / 100 * 6 - 3; // ±3px
+    return ((hashVal * 11 + 29) % 100) / 100 * 6 - 3;
   });
 
   // ── DECORATION PLACEMENT: seeded random across planet surface ──
@@ -333,8 +352,8 @@ export function TerrariumScene({
         <circle cx={cx} cy={cy} r={pr + 6} fill="none" stroke="rgba(100,200,100,0.03)" strokeWidth="0.5" />
 
         {/* ── CREATURES walking on planet surface ── */}
-        {/* Each creature is ONE sprite, properly sized, with horizontal label */}
-        {habits.map((h, i) => {
+        {/* Only first 12 habits render on planet; rest are list-only */}
+        {planetHabits.map((h, i) => {
           const st = getStage(h.id);
           const hp = isHappy(h.id);
           const streak = getStreak ? getStreak(h.id) : 0;
@@ -350,14 +369,19 @@ export function TerrariumScene({
           const py = cy + Math.sin(angleRad) * (pr + 2 + rJitter);
           const rotDeg = angleDeg + 90;
 
-          // Sprite display size based on stage
+          // Sprite display size — smooth scaling curve based on habit count
+          // 1-2 habits: 1.25× (big, hero feel), 12 habits: 0.55× (compact)
           const sz = CREATURE_SIZES[st] || 48;
-          // Scale UP for few habits (lots of space), scale DOWN for many
-          const scaledSz = N >= 8 ? Math.max(36, sz * 0.65)
-                         : N >= 6 ? Math.max(40, sz * 0.75)
-                         : N >= 4 ? Math.max(44, sz * 0.85)
-                         : N <= 2 ? Math.max(56, sz * 1.3)
-                         : Math.max(50, sz * 1.15); // 3 habits
+          const sizeScale = Np <= 2 ? 1.25
+                          : Np <= 3 ? 1.1
+                          : Np <= 5 ? 1.0 - (Np - 4) * 0.05 // 0.95 → 0.90
+                          : Math.max(0.55, 1.0 - (Np - 3) * 0.065); // smooth decrease
+          const scaledSz = Math.max(32, Math.round(sz * sizeScale));
+
+          // Label visibility: full for 1-9, hidden for 10+
+          const showLabel = Np < 10;
+          const labelFontSize = Np >= 7 ? 8 : Np >= 5 ? 9 : 10;
+          const labelWidth = Np >= 7 ? 55 : 75;
           const species = h.creature_type || deriveDragonFromId(h.id);
           const spritePath = getDragonSprite(st, species);
 
@@ -411,25 +435,24 @@ export function TerrariumScene({
                       : undefined,
                   }}
                 />
-                {/* Name label — always horizontal (counter-rotate), below sprite */}
-                {/* Hide labels entirely for 8+ habits, shrink for 6-7 */}
-                {N < 8 && (
+                {/* Name label — always horizontal, responsive to habit count */}
+                {showLabel && (
                 <foreignObject
-                  x={N >= 6 ? -30 : -40} y={4}
-                  width={N >= 6 ? 60 : 80} height={16}
+                  x={-labelWidth / 2} y={4}
+                  width={labelWidth} height={16}
                   transform={`rotate(${-rotDeg})`}
                   style={{ overflow: "visible" }}
                 >
                   <div style={{
                     textAlign: "center",
-                    fontSize: N >= 6 ? 8 : 10,
+                    fontSize: labelFontSize,
                     fontWeight: 600,
                     color: mood === "sleeping" ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.85)",
                     textShadow: "0 1px 3px rgba(0,0,0,0.8)",
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
-                    maxWidth: N >= 6 ? 60 : 80,
+                    maxWidth: labelWidth,
                     lineHeight: "14px",
                     fontFamily: "inherit",
                   }}>{h.creature_name || h.name}</div>
