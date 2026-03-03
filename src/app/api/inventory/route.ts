@@ -1,5 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { ensureProfile } from "@/lib/ensure-profile";
+import { SHOP_ITEMS } from "@/lib/constants";
 import { NextResponse } from "next/server";
 
 /** GET /api/inventory — fetch all owned items for current user */
@@ -18,8 +20,10 @@ export async function GET() {
 }
 
 /**
- * POST /api/inventory — add an item to user's inventory
+ * POST /api/inventory — purchase & add an item to user's inventory
  * Body: { itemId: string }
+ * Server validates: item exists, not already owned, user has enough coins.
+ * Deducts coins atomically so client can't cheat.
  */
 export async function POST(request: Request) {
   const { userId } = await auth();
@@ -31,7 +35,37 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid item ID" }, { status: 400 });
   }
 
+  // Validate item exists in the shop catalog
+  const shopItem = SHOP_ITEMS.find((i) => i.id === itemId);
+  if (!shopItem) {
+    return NextResponse.json({ error: "Item not found" }, { status: 404 });
+  }
+
   const supabase = await createServerSupabaseClient();
+
+  // Check if already owned (prevent double-purchase)
+  const { data: existing } = await supabase
+    .from("user_inventory")
+    .select("item_id")
+    .eq("user_id", userId)
+    .eq("item_id", itemId)
+    .maybeSingle();
+  if (existing) {
+    return NextResponse.json({ error: "Already owned" }, { status: 409 });
+  }
+
+  // Validate coins — server is the source of truth
+  const profile = await ensureProfile(supabase, userId);
+  const currentCoins = profile?.coins ?? 0;
+  if (currentCoins < shopItem.price) {
+    return NextResponse.json({ error: "Not enough coins", need: shopItem.price, have: currentCoins }, { status: 402 });
+  }
+
+  // Deduct coins
+  const newCoins = currentCoins - shopItem.price;
+  await supabase.from("profiles").update({ coins: newCoins }).eq("clerk_id", userId);
+
+  // Add to inventory
   const { data, error } = await supabase
     .from("user_inventory")
     .upsert(
@@ -42,7 +76,7 @@ export async function POST(request: Request) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data, { status: 201 });
+  return NextResponse.json({ ...data, coins: newCoins }, { status: 201 });
 }
 
 /**

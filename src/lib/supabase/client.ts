@@ -1,21 +1,6 @@
-"use client";
-
-import { createClient } from "@supabase/supabase-js";
-import { useSession } from "@clerk/nextjs";
-import { useMemo } from "react";
-
-export function useSupabase() {
-  const { session } = useSession();
-
-  return useMemo(() => {
-    return createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        async accessToken() {
-          return (await session?.getToken()) ?? "";
-        },
-      }
-    );
-  }, [session]);
-}
+// Client-side Supabase is not used — all data flows through API routes
+// with the service-role key (server.ts). This file is kept as a placeholder
+// in case direct client-side Supabase access is needed in the future.
+//
+// All client ↔ server communication goes through fetch() to /api/* routes,
+// which use Clerk auth middleware for security.

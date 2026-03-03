@@ -61,6 +61,9 @@ interface TendAppProps {
     season: string;
     earnedMilestoneCoins: Record<string, string[]>;
     stageDrops: Record<string, number>;
+    onboardingComplete: boolean;
+    lastCheckinDate: string | null;
+    lastBonusDate: string | null;
   };
 }
 
@@ -161,7 +164,7 @@ export function TendApp({
 
   // ── Tend+ tier state (server-verified via profiles.tier) ──
   const [isPro, setIsPro] = useState(initialIsPro);
-  const [lastBonusDate, setLastBonusDate] = useState<string | null>(null);
+  const [lastBonusDate, setLastBonusDate] = useState<string | null>(initialPreferences.lastBonusDate);
   const [showPaywall, setShowPaywall] = useState(false);
   const [showPremiumPrompt, setShowPremiumPrompt] = useState(false);
   const [sevenDayCelebration, setSevenDayCelebration] = useState<{ habitName: string; moneySaved: number; urgeCount: number } | null>(null);
@@ -214,20 +217,18 @@ export function TendApp({
       localStorage.setItem("tend_last_visit", now);
 
       // Tend+ state is now server-verified via initialIsPro prop
-      // Only load bonus date from localStorage
-      const savedBonus = localStorage.getItem("tend_last_bonus");
-      if (savedBonus) setLastBonusDate(savedBonus);
+      // Bonus date is now server-persisted in user_preferences
 
-      // Check onboarding
-      const onboardingDone = localStorage.getItem("tend_onboarding_complete");
+      // Check onboarding — use server-persisted flag (fallback to localStorage for migration)
+      const onboardingDone = initialPreferences.onboardingComplete || localStorage.getItem("tend_onboarding_complete") === "1";
       if (!onboardingDone && initialHabits.length === 0) {
         setShowOnboarding(true);
       }
 
       // Morning check-in — show once per day if user has habits
-      const checkinDate = localStorage.getItem("tend_checkin_date");
       const todayNow = new Date().toISOString().slice(0, 10);
-      if (checkinDate !== todayNow && initialHabits.length > 0 && onboardingDone) {
+      const lastCheckin = initialPreferences.lastCheckinDate || localStorage.getItem("tend_checkin_date");
+      if (lastCheckin !== todayNow && initialHabits.length > 0 && onboardingDone) {
         setShowMorningCheckin(true);
       }
 
@@ -380,7 +381,7 @@ export function TendApp({
     if (isTendPlus() && lastBonusDate !== todayVal) {
       setCoins((c) => c + 5);
       setLastBonusDate(todayVal);
-      localStorage.setItem("tend_last_bonus", todayVal);
+      apiSync("/api/preferences", "PUT", { last_bonus_date: todayVal });
       setCoinToast({ msg: "+5 daily Tend+ coins", icon: Coins });
       syncCoins(5);
     }
@@ -937,8 +938,17 @@ export function TendApp({
   const removeHabit = async (id: string) => {
     const habit = habits.find((h) => h.id === id);
     const habitLogs = habit?.logs || [];
+    const savedQuitData = quitDataMap[id];
 
     setHabits((p) => p.filter((h) => h.id !== id));
+    // Clean up quit data for this habit
+    if (savedQuitData) {
+      setQuitDataMap((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
     if (detailId === id) {
       setDetailId(null);
       setPage("main");
@@ -948,6 +958,7 @@ export function TendApp({
       msg: `Removed "${habit?.name}"`,
       onUndo: () => {
         if (habit) setHabits((p) => [...p, { ...habit, logs: habitLogs }]);
+        if (savedQuitData) setQuitDataMap((prev) => ({ ...prev, [id]: savedQuitData }));
         setUndoToast(null);
       },
     });
@@ -1007,17 +1018,38 @@ export function TendApp({
     }
   };
 
-  const buyItem = (itemId: string) => {
+  const buyItem = async (itemId: string) => {
     const item = SHOP_ITEMS.find((i) => i.id === itemId);
     if (!item || ownedItems.includes(itemId)) return;
     if (coins < item.price) return;
+
+    // Optimistic UI update
     setOwnedItems((prev) => [...prev, itemId]);
+    setCoins((prev) => Math.max(0, prev - item.price));
     haptic("light");
     setCoinToast({ msg: `${item.name} placed on your planet!`, icon: Store });
-    setCoins((prev) => Math.max(0, prev - item.price));
-    syncCoins(-item.price);
-    // Sync to server inventory
-    apiSync("/api/inventory", "POST", { itemId });
+
+    // Server validates coins & deducts atomically
+    try {
+      const res = await fetch("/api/inventory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId }),
+      });
+      if (!res.ok) {
+        // Revert optimistic update on failure
+        setOwnedItems((prev) => prev.filter((id) => id !== itemId));
+        setCoins((prev) => prev + item.price);
+      } else {
+        const data = await res.json();
+        // Sync server coin balance to prevent drift
+        if (typeof data.coins === "number") setCoins(data.coins);
+      }
+    } catch {
+      // Revert on network error
+      setOwnedItems((prev) => prev.filter((id) => id !== itemId));
+      setCoins((prev) => prev + item.price);
+    }
   };
 
   // Bounce-back recovery: check once per day when any habit is completed
@@ -1077,7 +1109,8 @@ export function TendApp({
       await addHabit(buildPick.name, buildPick.color, buildPick.iconName);
     }
 
-    // Mark onboarding complete
+    // Mark onboarding complete — persist to server + localStorage fallback
+    apiSync("/api/preferences", "PUT", { onboarding_complete: true });
     localStorage.setItem("tend_onboarding_complete", "1");
     setShowOnboarding(false);
   };
@@ -1153,7 +1186,9 @@ export function TendApp({
           yesterdayStr={yesterdayStr}
           onDismiss={() => {
             setShowMorningCheckin(false);
-            localStorage.setItem("tend_checkin_date", todayStr);
+            const checkinDay = todayStr;
+            apiSync("/api/preferences", "PUT", { last_checkin_date: checkinDay });
+            localStorage.setItem("tend_checkin_date", checkinDay);
             setCoins((p) => p + 2);
             syncCoins(2);
             setCoinToast({ msg: "Checked in! +2", icon: Sunrise });

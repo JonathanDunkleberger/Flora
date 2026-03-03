@@ -8,13 +8,13 @@ export default function PricingPage() {
   const [annual, setAnnual] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  async function handleCheckout(priceId: string) {
+  async function handleCheckout(plan: "monthly" | "annual") {
     setLoading(true);
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId }),
+        body: JSON.stringify({ plan }),
       });
       const data = await res.json();
       if (data.url) window.location.href = data.url;
@@ -32,32 +32,29 @@ export default function PricingPage() {
       period: "forever",
       features: [
         "3 habits",
-        "Fern plant only",
+        "Random dragon egg",
         "30-day history",
-        "Basic garden",
+        "Basic terrarium",
         "Daily check-ins",
       ],
       cta: "Current Plan",
       disabled: true,
     },
     {
-      name: "Tend Pro",
+      name: "Tend+",
       price: annual ? "$39.99" : "$4.99",
       period: annual ? "/year" : "/month",
       savings: annual ? "Save $20/year" : null,
       features: [
         "Unlimited habits",
-        "All 6 plant types",
-        "Full history",
-        "Heat map analytics",
-        "All garden ambience effects",
-        "Advanced statistics",
+        "Choose your dragon egg",
+        "Full history & heatmaps",
+        "Advanced insights",
+        "All terrarium items",
         "Priority support",
       ],
       cta: "Start Growing",
-      priceId: annual
-        ? process.env.NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID || "price_yearly"
-        : process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID || "price_monthly",
+      plan: (annual ? "annual" : "monthly") as "monthly" | "annual",
       isPro: true,
     },
   ];
@@ -66,7 +63,7 @@ export default function PricingPage() {
     <div className="max-w-2xl mx-auto px-4 pt-20 pb-24">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold text-slate-800">Grow Without Limits</h1>
-        <p className="text-sm text-slate-500 mt-1">Upgrade to Tend Pro to unlock your full garden potential.</p>
+        <p className="text-sm text-slate-500 mt-1">Upgrade to Tend+ to unlock your full potential.</p>
       </div>
 
       {/* Toggle */}
@@ -120,7 +117,7 @@ export default function PricingPage() {
             </ul>
 
             <button
-              onClick={() => plan.priceId && handleCheckout(plan.priceId)}
+              onClick={() => plan.plan && handleCheckout(plan.plan)}
               disabled={plan.disabled || loading}
               className={cn("w-full py-3 rounded-2xl font-semibold text-sm transition-colors tap-bounce",
                 plan.isPro

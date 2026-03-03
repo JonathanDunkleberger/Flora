@@ -33,14 +33,19 @@ export async function POST(req: Request) {
       const clerkId = session.metadata?.clerk_id;
       if (!clerkId) break;
 
+      // Use upsert — profile may not exist yet if Clerk webhook didn't fire
       await supabase
         .from("profiles")
-        .update({
-          stripe_customer_id: session.customer as string,
-          stripe_subscription_id: session.subscription as string,
-          tier: "pro",
-        })
-        .eq("clerk_id", clerkId);
+        .upsert(
+          {
+            clerk_id: clerkId,
+            email: (session.customer_details?.email) || "",
+            stripe_customer_id: session.customer as string,
+            stripe_subscription_id: session.subscription as string,
+            tier: "pro",
+          },
+          { onConflict: "clerk_id" }
+        );
       break;
     }
 

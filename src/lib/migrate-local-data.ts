@@ -49,6 +49,14 @@ export async function migrateLocalStorageToServer(): Promise<boolean> {
     const stageRaw = localStorage.getItem("tend_stage_drops");
     if (stageRaw) prefs.stage_drops = JSON.parse(stageRaw);
 
+    // Migrate onboarding / checkin / bonus state
+    const onboardingRaw = localStorage.getItem("tend_onboarding_complete");
+    if (onboardingRaw === "1") prefs.onboarding_complete = true;
+    const checkinRaw = localStorage.getItem("tend_checkin_date");
+    if (checkinRaw) prefs.last_checkin_date = checkinRaw;
+    const bonusRaw = localStorage.getItem("tend_last_bonus");
+    if (bonusRaw) prefs.last_bonus_date = bonusRaw;
+
     if (Object.keys(prefs).length > 0) {
       await fetch("/api/preferences", {
         method: "PUT",

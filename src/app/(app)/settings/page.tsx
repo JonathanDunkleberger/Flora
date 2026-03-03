@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { ensureProfile } from "@/lib/ensure-profile";
 import Link from "next/link";
 import { Crown, ExternalLink, ChevronLeft } from "lucide-react";
 import { SettingsClient } from "./settings-client";
@@ -9,12 +10,7 @@ export default async function SettingsPage() {
   if (!userId) return null;
   const supabase = await createServerSupabaseClient();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("tier, stripe_subscription_id")
-    .eq("clerk_id", userId)
-    .single();
-
+  const profile = await ensureProfile(supabase, userId);
   const isPro = profile?.tier === "pro";
 
   return (
@@ -25,7 +21,7 @@ export default async function SettingsPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <Crown size={18} color={isPro ? "#f59e0b" : "rgba(0,0,0,0.15)"} />
-            <span style={{ fontSize: 14, fontWeight: 600 }}>{isPro ? "Tend Pro" : "Free Plan"}</span>
+            <span style={{ fontSize: 14, fontWeight: 600 }}>{isPro ? "Tend+" : "Free Plan"}</span>
           </div>
           {isPro ? (
             <SettingsClient />
@@ -37,8 +33,8 @@ export default async function SettingsPage() {
         </div>
         {!isPro && (
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid rgba(0,0,0,0.04)", fontSize: 11, color: "rgba(0,0,0,0.3)" }}>
-            <p>Free: 5 habits, all features</p>
-            <p style={{ color: "#6366f1", marginTop: 3 }}>Pro: Unlimited habits, exclusive creatures</p>
+            <p>Free: 3 habits, all recovery features</p>
+            <p style={{ color: "#6366f1", marginTop: 3 }}>Tend+: Unlimited habits, choose your dragon</p>
           </div>
         )}
       </div>

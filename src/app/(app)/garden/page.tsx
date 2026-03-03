@@ -82,7 +82,10 @@ export default async function GardenPage() {
     season: string;
     earnedMilestoneCoins: Record<string, string[]>;
     stageDrops: Record<string, number>;
-  } = { darkMode: false, season: "summer", earnedMilestoneCoins: {}, stageDrops: {} };
+    onboardingComplete: boolean;
+    lastCheckinDate: string | null;
+    lastBonusDate: string | null;
+  } = { darkMode: false, season: "summer", earnedMilestoneCoins: {}, stageDrops: {}, onboardingComplete: false, lastCheckinDate: null, lastBonusDate: null };
   {
     const { data: prefs } = await supabase
       .from("user_preferences")
@@ -95,6 +98,9 @@ export default async function GardenPage() {
         season: prefs.season ?? "summer",
         earnedMilestoneCoins: (prefs.earned_milestone_coins as Record<string, string[]>) ?? {},
         stageDrops: (prefs.stage_drops as Record<string, number>) ?? {},
+        onboardingComplete: prefs.onboarding_complete ?? false,
+        lastCheckinDate: prefs.last_checkin_date ?? null,
+        lastBonusDate: prefs.last_bonus_date ?? null,
       };
     }
   }

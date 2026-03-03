@@ -10,9 +10,9 @@ export async function createServerSupabaseClient() {
   );
 }
 
-export function createAdminSupabaseClient() {
-  return createClient(
+// Alias for webhook handlers and other sync contexts
+export const createAdminSupabaseClient = () =>
+  createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
-}

@@ -1,5 +1,5 @@
 -- ============================================================
--- Bloom – Supabase Database Schema (v2 – creature/terrarium theme)
+-- Tend – Supabase Database Schema (v3 – dragon/creature theme)
 -- Run this in the Supabase SQL Editor to set up all tables.
 -- ============================================================
 
@@ -16,7 +16,7 @@ create table if not exists public.profiles (
   display_name text,
   avatar_url   text,
   tier         text not null default 'free' check (tier in ('free', 'pro')),
-  coins        int not null default 0,
+  coins        int not null default 250,
   streak_freezes jsonb not null default '{}',
   stripe_customer_id     text,
   stripe_subscription_id text,
@@ -39,6 +39,8 @@ create table if not exists public.habits (
   is_archived  boolean not null default false,
   is_paused    boolean not null default false,
   sort_order   int not null default 0,
+  creature_name text,
+  creature_type int,
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
@@ -88,6 +90,23 @@ create table if not exists public.milestones (
 create index if not exists idx_milestones_habit_id on public.milestones (habit_id);
 
 -- ============================================================
+-- 5b. URGE_ENTRIES (urge journal for quit habits)
+-- ============================================================
+create table if not exists public.urge_entries (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     text not null,
+  habit_id    uuid not null references public.habits(id) on delete cascade,
+  method      text not null check (method in ('breathe', 'write', 'redirect')),
+  tags        text[] default '{}',
+  note        text default '',
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists idx_urge_entries_user on public.urge_entries (user_id);
+create index if not exists idx_urge_entries_habit on public.urge_entries (habit_id);
+create index if not exists idx_urge_entries_created on public.urge_entries (created_at);
+
+-- ============================================================
 -- 6. QUIT_PROGRESS (one row per quit-type habit)
 -- ============================================================
 create table if not exists public.quit_progress (
@@ -130,6 +149,9 @@ create table if not exists public.user_preferences (
   season                text not null default 'summer',
   earned_milestone_coins jsonb not null default '{}',
   stage_drops           jsonb not null default '{}',
+  onboarding_complete   boolean not null default false,
+  last_checkin_date     text,
+  last_bonus_date       text,
   created_at            timestamptz not null default now(),
   updated_at            timestamptz not null default now()
 );
@@ -295,17 +317,23 @@ create policy "Users can update own preferences"
   on public.user_preferences for update
   using (user_id = requesting_user_id());
 
+-- URGE_ENTRIES
+alter table public.urge_entries enable row level security;
+
+create policy "Users can view own urge entries"
+  on public.urge_entries for select
+  using (user_id = requesting_user_id());
+
+create policy "Users can insert own urge entries"
+  on public.urge_entries for insert
+  with check (user_id = requesting_user_id());
+
 -- ============================================================
--- MIGRATION: If upgrading from v1, run these ALTER statements:
+-- MIGRATION: If upgrading from an older schema, run:
 -- ============================================================
--- ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS coins int NOT NULL DEFAULT 0;
--- ALTER TABLE public.habits ADD COLUMN IF NOT EXISTS color text NOT NULL DEFAULT '#6366f1';
--- ALTER TABLE public.habits ADD COLUMN IF NOT EXISTS icon_name text NOT NULL DEFAULT 'Target';
--- ALTER TABLE public.habits DROP COLUMN IF EXISTS plant_type;
--- ALTER TABLE public.habits DROP COLUMN IF EXISTS icon;
--- ALTER TABLE public.habits DROP COLUMN IF EXISTS habit_group;
--- ALTER TABLE public.habits DROP COLUMN IF EXISTS habit_type;
--- ALTER TABLE public.habits DROP COLUMN IF EXISTS description;
--- ALTER TABLE public.habits DROP COLUMN IF EXISTS frequency;
--- ALTER TABLE public.habits DROP COLUMN IF EXISTS custom_days;
--- ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS streak_freezes jsonb NOT NULL DEFAULT '{}';
+-- ALTER TABLE public.profiles ALTER COLUMN coins SET DEFAULT 250;
+-- ALTER TABLE public.habits ADD COLUMN IF NOT EXISTS creature_name text;
+-- ALTER TABLE public.habits ADD COLUMN IF NOT EXISTS creature_type int;
+-- ALTER TABLE public.user_preferences ADD COLUMN IF NOT EXISTS onboarding_complete boolean NOT NULL DEFAULT false;
+-- ALTER TABLE public.user_preferences ADD COLUMN IF NOT EXISTS last_checkin_date text;
+-- ALTER TABLE public.user_preferences ADD COLUMN IF NOT EXISTS last_bonus_date text;

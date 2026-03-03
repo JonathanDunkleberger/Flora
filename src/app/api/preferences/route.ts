@@ -20,6 +20,9 @@ export async function GET() {
       season: "summer",
       earned_milestone_coins: {},
       stage_drops: {},
+      onboarding_complete: false,
+      last_checkin_date: null,
+      last_bonus_date: null,
     });
   }
   return NextResponse.json(data);
@@ -45,6 +48,10 @@ export async function PUT(request: Request) {
   if (body.stage_drops && typeof body.stage_drops === "object") {
     allowed.stage_drops = body.stage_drops;
   }
+  // Server-persisted UI state (was localStorage-only before)
+  if (typeof body.onboarding_complete === "boolean") allowed.onboarding_complete = body.onboarding_complete;
+  if (typeof body.last_checkin_date === "string") allowed.last_checkin_date = body.last_checkin_date;
+  if (typeof body.last_bonus_date === "string") allowed.last_bonus_date = body.last_bonus_date;
 
   if (Object.keys(allowed).length === 0) {
     return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
